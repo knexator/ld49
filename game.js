@@ -20,7 +20,7 @@ let DEBUG_WALK_OUTOFBONDS = false
 
 let action_queue_pos = null
 
-let extra_draw_code = null
+let extra_draw_code = []
 
 function drawgrid() {
   //ctx.lineWidth = 3;
@@ -67,13 +67,14 @@ function draw() {
   }
   if (wasKeyPressed(' ')) doturn()
 
+  if (extra_draw_code.length > 0) extra_draw_code[extra_draw_code.length - 1]()
+
   drawgridelements();
 
   drawgrid();
 
   drawactionqueue();
   //something goes here
-  if (extra_draw_code) extra_draw_code()
 
   // engine stuff
   mouse_prev = Object.assign({}, mouse);
@@ -146,9 +147,18 @@ async function kill_at(coords) {
 }
 
 async function move_to(from_coords, to_coords) {
+  console.log("called move_to")
+  extra_draw_code.push(() => {
+    ctx.fillStyle = "red"
+    ctx.fillRect(from_coords.x * TILE, from_coords.y * TILE, TILE, TILE)
+    ctx.fillRect(to_coords.x * TILE, to_coords.y * TILE, TILE, TILE)
+  })
+  if (!inBounds(from_coords)) return true
   let symbol = grid[from_coords.str()]
   if (symbol === undefined) {
     // this will be used for graphics
+    await sleep(200)
+    extra_draw_code.pop()
     return true;
   }
   if (!inBounds(to_coords)) {
@@ -176,6 +186,9 @@ async function move_to(from_coords, to_coords) {
   delete grid[from_coords.str()];
   symbol.coords = to_coords
   grid[to_coords.str()] = symbol
+  await sleep(200)
+  extra_draw_code.pop()
+
   return true
 }
 
@@ -366,7 +379,7 @@ class PusherRight extends Symbol {
         let target_coor = this.coords.add(new Coords(0, k * d))
         let pushTo_coor = this.coords.add(new Coords(0, (k + 1) * d))
         await move_to(target_coor, pushTo_coor)
-        await sleep(20)
+        // await sleep(20)
         /*if (inBounds(target_coor) && occupied(target_coor)) {
           // there is something to be pushed
           if (DEBUG_PUSH_OFF_BORDER) {

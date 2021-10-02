@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Title goes here</title>
+    <style>
+    	* { padding: 0; margin: 0; }
+    	canvas { background: #eee; display: block; margin: 0 auto; }
+    </style>
+</head>
+<body>
+
+<canvas id="myCanvas" width="800" height="600"></canvas>
+
+<script>
+	var canvas = document.getElementById("myCanvas");
+	var ctx = canvas.getContext("2d");
+	var image0 = new Image();
+	image0.src = "s0.png";
+	function drawgrid(){
+		//ctx.lineWidth = 3;
+		for (let i = 0; i < 10; i++){
+			ctx.moveTo(0,50*(i+1))
+			ctx.lineTo(500,50*(i+1))
+			ctx.moveTo(50*(i+1),0)
+			ctx.lineTo(50*(i+1),500)
+		}
+		ctx.stroke()
+	}
+	
+	function drawgridelements(){
+		for (const [key, value] of Object.entries(grid)) {
+			ctx.drawImage(value.sprite,50*value.coords.x,50*value.coords.y);
+		}
+	}
+	
+	function drawaction(){
+		ctx.moveTo(0,canvas.height - 50);
+		ctx.lineTo(50*actions.length,canvas.height - 50);
+		for(let i = 0; i < actions.length;i++){
+			ctx.drawImage(actions[i].sprite,50*i,canvas.height - 50);
+			ctx.moveTo(50*(i+1),canvas.height - 50);
+			ctx.lineTo(50*(i+1),canvas.height);
+		}
+		ctx.stroke();
+	}
+	
+	function draw(){
+		ctx.clearRect(0, 0, canvas.width, canvas.height);
+		
+		drawgrid();
+		
+		drawgridelements();
+		
+		drawaction();
+		//something goes here
+	}
+	
+	class Coords{
+		constructor(x, y){
+			this.x = x;
+			this.y = y;
+		}
+		
+		add(c2){
+			return new Coords(this.x + c2.x,this.y + c2.y);
+		}
+		
+		scalar(m){
+			return new Coords(this.x * m, this.y * m);
+		}
+		
+		str(){
+			return this.x.toString()+","+this.y.toString();
+		}
+	}
+	
+	var offsets = [new Coords(0,1), new Coords(1,0), new Coords(0,-1), new Coords(-1,0)]; 
+	
+	var threebythreeoffsets = [new Coords(-1,-1),new Coords(0,-1),new Coords(1,-1),
+							   new Coords(1,0),
+							   new Coords(1,1),new Coords(0,1),new Coords(-1,1),
+							   new Coords(-1,0)]; //rotational order
+	var grid = {};
+	
+	var actions = [];
+	
+	var pendingactions = [];
+	
+	function checkforblocker(symbol){
+		for (const offset of offsets){
+			let target = grid[symbol.coords.add(offset).str()];
+			if (typeof target !== 'undefined'){
+				if(target.name == "Blocker"){
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	
+	class Symbol{
+		constructor(coords,placefunc,actfunc,delfunc,sprite){
+			this.coords = coords;
+			this.placefunc = placefunc;
+			this.actfunc = (() => ( checkforblocker(this) ? {} : actfunc()));
+			this.delfunc = (() => {delete grid[this.coords.str()]; delfunc()});
+			this.sprite = sprite;
+		}
+	}
+	
+	
+	class Nooper extends Symbol{
+		constructor(coords){
+			super(coords,() => {},() => {},() => {},image0);
+		}
+	}
+	
+	class Bomb extends Symbol{
+		constructor(coords){
+			super(coords,() => {},() => this.explode(),() => {},image1	);
+		}
+		explode(){
+			for (const offset of threebythreeoffsets){
+				if (occupied(this.coords.add(offset))){
+					grid[this.coords.add(offset).str()].delfunc();
+				}
+			}
+		}
+	}
+	
+	class Faller extends Symbol{
+		constructor(coords){
+			super(coords,() => {},() => this.fall(),() => {},image7);
+		}
+		fall(){
+			if(!occupied(this.coords.add(new Coords(0,1)))){
+				delete grid[this.coords.str()];
+				this.coords = this.coords.add(new Coords(0,1));
+				grid[this.coords.str()] = this;
+			}
+		}
+	}
+	
+	var image0 = new Image();
+	image0.src = "s0.png";
+	
+	var image1 = new Image();
+	image1.src = "s1.png";
+	
+	var image7 = new Image();
+	image7.src = "s7.png";
+	
+	function occupied(coords){
+		let target = grid[coords.str()];
+		return (typeof target !== 'undefined');
+	}
+	
+	function makesymbolat(coords,symboltype){ //called when a symbol makes a symbol
+		s = new symboltype(coords);
+		grid[coords.str()] = s;
+		pendingactions.push(s);
+		return s;
+	}
+	
+	function placesymbolat(coords,symboltype){ //called when the player places a symbol, should potentially remove it from bank too
+		s = new symboltype(coords);
+		grid[coords.str()] = s;
+		s.placefunc();
+		actions.push(s);
+		doturn();
+	}
+	
+	function doturn(){
+		
+	}
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	function mouseMoveHandler(){
+	
+	}
+	function mouseDownHandler(){
+		console.log("test");
+	}
+	function mouseUpHandler(){
+	
+	}
+	
+	document.addEventListener("mousemove", mouseMoveHandler);
+	document.addEventListener("mousedown", mouseDownHandler);
+	document.addEventListener("mouseup", mouseUpHandler);
+	
+	
+	setInterval(draw, 100);
+	
+	
+	
+	
+</script>
+
+</body>
+</html>

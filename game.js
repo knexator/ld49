@@ -3,10 +3,10 @@ var ctx = canvas.getContext("2d");
 /*var image0 = new Image();
 image0.src = "s0.png";*/
 
-/*known edge cases
+/*known issues
 
 Preservers wont properly preserve other Preservers
-rotators wont properly animate the destruction of border stuff
+rotators wont properly tirgger the destruction of border stuff
 */
 
 let debug_keys = '0123456789abcdefghijklmnopqrstuvwxyz'
@@ -186,7 +186,7 @@ async function move_to(from_coords, to_coords) {
   delete grid[from_coords.str()];
   symbol.coords = to_coords
   grid[to_coords.str()] = symbol
-  await sleep(200)
+  await sleep(100)
   extra_draw_code.pop()
 
   return true
@@ -194,6 +194,10 @@ async function move_to(from_coords, to_coords) {
 
 // activate the stuff
 async function activate_at(coords) {
+  extra_draw_code.push(() => {
+    ctx.fillStyle = "red"
+    ctx.fillRect(coords.x * TILE - 20, coords.y * TILE - 20, TILE + 40, TILE + 40)
+  })
   let symbol = grid[coords.str()]
   if (symbol === undefined) {
     // this will be used for graphics
@@ -201,6 +205,7 @@ async function activate_at(coords) {
   }
   if (checkforblocker(symbol)) return false
   await symbol.actfunc()
+  extra_draw_code.pop()
   return true
 }
 
@@ -247,19 +252,6 @@ class Symbol {
   sprite = null // static property, doesn't need to be in constructor
   constructor(coords) {
     this.coords = coords;
-    /*this.placefunc = placefunc;
-    this.actfunc = (() => (checkforblocker(this) ? {} : actfunc()));
-    this.delfunc = (() => {
-      let deleted = grid[this.coords.str()]
-      delete grid[this.coords.str()];
-      actions = actions.filter(x => x !== deleted)
-      pendingactions = pendingactions.filter(x => x !== deleted)
-      delfunc()
-    });*/
-    // this.sprite = sprite;
-
-    /*this.WALK_OUTOFBONDS = false
-    this.MOVE_RESPECTFULLY = true*/
     this.deleted = false
   }
 
@@ -274,66 +266,6 @@ class Symbol {
   async delfunc() {
 
   }
-
-  /*forceMove(new_coors) {
-    delete grid[this.coords.str()];
-    this.coords = new_coors;
-    if (!inBounds(new_coors)) {
-      console.error("calling forceMove with coors outside bounds, oops")
-    }
-    grid[new_coors.str()] = this;
-  }*/
-
-  // helper function: really delete stuff
-  /*_delete() {
-    let deleted = grid[this.coords.str()]
-    delete grid[this.coords.str()];
-    actions = actions.filter(x => x !== deleted)
-    pendingactions = pendingactions.filter(x => x !== deleted)
-  }*/
-
-  // Tries to move by own will; returns true if move was succesful
-  /*selfMove(new_coors) {
-    if (!inBounds(new_coors)) {
-      if (this.WALK_OUTOFBONDS) {
-        delete grid[this.coords.str()];
-        return true // a bit arbitrary
-      } else {
-        return false
-      }
-    }
-    let occupying_thing = grid[this.coords.str()]
-    if (occupying_thing) {
-      if (this.MOVE_RESPECTFULLY) {
-        return false // doesn't move
-      } else {
-        if (occupying_thing.getOverwritten()) {
-          delete grid[this.coords.str()];
-          this.coords = new_coors;
-          grid[new_coors.str()] = this;
-        }
-      }
-    } else {
-      delete grid[this.coords.str()];
-      this.coords = new_coors;
-      grid[new_coors.str()] = this;
-    }
-  }*/
-
-  // Get overwritten by someone else. Returns true if allowed, returns false if not
-  /*getStepped() {
-    // Design decision: stuff is happy to be overwritten, but doesn't call delfunc
-    this._delete()
-    return true
-  }*/
-
-  // Get explicitely killed by bomb, TaxiCab, ???. Should return true
-  /*getKilled() {
-    this.delfunc()
-    this._delete()
-    return true
-  }*/
-
 
 }
 
@@ -401,48 +333,6 @@ class PusherRight extends Symbol {
     await sleep(50)
     await move_to(this.coords, this.coords.add(new Coords(1, 0)))
   }
-
-  /*
-  pushColumn() {
-    for (let k = N_TILES; k > 0; k--) {
-      for (let d = -1; d < 2; d += 2) { // d = -1, 1
-        let target_coor = this.coords.add(new Coords(0, k * d))
-        let pushTo_coor = this.coords.add(new Coords(0, (k + 1) * d))
-        if (inBounds(target_coor) && occupied(target_coor)) {
-          // there is something to be pushed
-          if (DEBUG_PUSH_OFF_BORDER) {
-            // option 1: stuff at border dissapears
-            if (!inBounds(pushTo_coor)) {
-              grid[target_coor.str()].delfunc();
-            } else {
-              grid[target_coor.str()].forceMove(pushTo_coor);
-            }
-          } else {
-            // option 2: stuff at border isn't pushed
-            if (inBounds(pushTo_coor) && !occupied(pushTo_coor)) {
-              grid[target_coor.str()].forceMove(pushTo_coor);
-            }
-          }
-        }
-      }
-    }
-  }
-  moveRight() {
-    // extra_draw_code = null
-    let target_coor = this.coords.add(new Coords(1, 0))
-    if (DEBUG_PUSH_OFF_BORDER) {
-      // option 1: trying to move off border deletes the object
-      if (!inBounds(target_coor)) this.delfunc();
-      if (occupied(target_coor)) grid[target_coor.str()].delfunc(); // should never happen
-      this.forceMove(target_coor)
-    } else {
-      // option 2: the object doesn't move off border
-      if (!inBounds(target_coor)) return
-      if (occupied(target_coor)) grid[target_coor.str()].delfunc();
-      this.forceMove(target_coor)
-    }
-  }
-  */
 }
 
 class PullerUp extends Symbol {
@@ -463,7 +353,7 @@ class PullerUp extends Symbol {
           let target_coor = this.coords.add(new Coords(k * d, 0))
           let pullTo_coor = this.coords.add(new Coords((k - 1) * d, 0))
           await move_to(target_coor, pullTo_coor)
-          await sleep(20)
+          // await sleep(20)
         }
       }
     }
@@ -509,18 +399,6 @@ class Rotator extends Symbol {
       }*/
       // rotatingPieces.push(grid[offset_coor.str()]) // possibly undefined, but no problem
     }
-    /*for (const offset of threebythreeoffsets) {
-      let offset_coor = this.coords.add(offset)
-      if (inBounds(offset_coor) && occupied(offset_coor)) {
-        grid[offset_coor.str()].delfunc();
-      }
-    }*/
-    /*let new_coors = this.coords.add(new Coords(0, 1))
-    if (inBounds(new_coors) && !occupied(new_coors)) {
-      delete grid[this.coords.str()];
-      this.coords = new_coors;
-      grid[new_coors.str()] = this;
-    }*/
     await sleep(100)
   }
 }
@@ -622,26 +500,14 @@ class TaxiCab extends Symbol {
 class Faller extends Symbol {
   sprite = images[7]
 
-  /*constructor(coords) {
-    super(coords, () => { }, () => this.fall(), () => { }, images[7]);
-  }*/
   async actfunc() {
     // a bit of a special case, don't directly use move_to since that would fall off the border
     let new_coors = this.coords.add(new Coords(0, 1))
     if (inBounds(new_coors) && !occupied(new_coors)) {
       await move_to(this.coords, new_coors)
-      await sleep(100)
+      // await sleep(100)
     }
   }
-
-  /*fall() {
-    let new_coors = this.coords.add(new Coords(0, 1))
-    if (inBounds(new_coors) && !occupied(new_coors)) {
-      delete grid[this.coords.str()];
-      this.coords = new_coors;
-      grid[new_coors.str()] = this;
-    }
-  }*/
 }
 
 class Blocker extends Symbol {
@@ -851,33 +717,6 @@ async function doturn() {
   pendingactions = []
   console.log("finished all actions")
 }
-
-/*function do_cur_action() {
-  if (action_queue_pos >= actions.length) {
-    action_queue_pos = null;
-    actions = actions.concat(pendingactions)
-    pendingactions = []
-    console.log("finished all actions")
-    return;
-  } else {
-    console.log("doing action: ", actions[action_queue_pos])
-    let next_step = actions[action_queue_pos].actfunc()
-    setTimeout(() => do_cur_ministep(next_step), ACTION_TIME)
-    // action_queue_pos += 1
-    // setTimeout(do_cur_action, ACTION_TIME)
-  }
-}*/
-
-/*function do_cur_ministep(step) {
-  if (step === undefined) {
-    // finished
-    action_queue_pos += 1
-    setTimeout(do_cur_action, ACTION_TIME)
-  } else {
-    let next_step = step()
-    setTimeout(() => do_cur_ministep(next_step), ACTION_TIME)
-  }
-}*/
 
 let symbol_types = [
   Nooper, // 0

@@ -599,12 +599,27 @@ let held_tile = null;
 
 let extra_draw_code = []
 
+let prevLevel_img = new Image();
+prevLevel_img.src = "prev.png";
+
+let nextLevel_img = new Image();
+nextLevel_img.src = "next.png";
+
+let reset_img = new Image();
+reset_img.src = "reset.png";
+
+let undo_img = new Image();
+undo_img.src = "undo.png";
+
+let redo_img = new Image();
+redo_img.src = "redo.png";
+
 let buttons = [
-  [X_BUTTON_BAR, Y_BUTTON_BAR, TILE*2, TILE, prevLevel],
-  [X_BUTTON_BAR + TILE*2, Y_BUTTON_BAR, TILE*2, TILE, undo],
-  [X_BUTTON_BAR + TILE*4, Y_BUTTON_BAR, TILE*2, TILE, reset],
-  [X_BUTTON_BAR + TILE*6, Y_BUTTON_BAR, TILE*2, TILE, redo],
-  [X_BUTTON_BAR + TILE*8, Y_BUTTON_BAR, TILE*2, TILE, nextLevel],
+  [X_BUTTON_BAR, Y_BUTTON_BAR, TILE*2, TILE, prevLevel, prevLevel_img],
+  [X_BUTTON_BAR + TILE*2, Y_BUTTON_BAR, TILE*2, TILE, undo, undo_img],
+  [X_BUTTON_BAR + TILE*4, Y_BUTTON_BAR, TILE*2, TILE, reset, reset_img],
+  [X_BUTTON_BAR + TILE*6, Y_BUTTON_BAR, TILE*2, TILE, redo, redo_img],
+  [X_BUTTON_BAR + TILE*8, Y_BUTTON_BAR, TILE*2, TILE, nextLevel, nextLevel_img],
 ]
 
 function drawgrid() {
@@ -711,12 +726,13 @@ function draw_victory_area() {
 }
 
 function draw_button(button) {
-  let [x,y,w,h,f] = button
+  let [x,y,w,h,f,spr] = button
   let pressed = isButtonDown('left') && (mouse.x >= x && mouse.x < x + w && mouse.y >= y && mouse.y < y + h)
   if (pressed) {
     ctx.fillStyle = "#5278A5"
     ctx.fillRect(x,y,w,h);
   }
+  ctx.drawImage(spr, x, y)
   ctx.strokeRect(x,y,w,h);
 }
 
@@ -762,7 +778,7 @@ function draw() {
 			held_tile = null;
 		}
   } else if (wasButtonReleased('left') && held_tile === null) {
-    buttons.forEach(([x,y,w,h,f]) => {
+    buttons.forEach(([x,y,w,h,f,spr]) => {
       if (mouse.x >= x && mouse.x < x + w && mouse.y >= y && mouse.y < y + h) {
         f();
       }

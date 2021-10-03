@@ -5,7 +5,6 @@ image0.src = "s0.png";*/
 
 /*known issues
 
-Preservers wont properly preserve other Preservers
 rotators wont properly tirgger the destruction of border stuff
 */
 
@@ -60,7 +59,7 @@ class Bomb extends Symbol {
       let offset_coor = this.coords.add(offset)
       await kill_at(offset_coor)
       await sleep(20)
-      // grid[offset_coor.str()]?.getKilled()
+      // L.grid[offset_coor.str()]?.getKilled()
     }
   }
 }
@@ -87,14 +86,14 @@ class PusherRight extends Symbol {
           if (DEBUG_PUSH_OFF_BORDER) {
             // option 1: stuff at border dissapears
             if (!inBounds(pushTo_coor)) {
-              grid[target_coor.str()].delfunc();
+              L.grid[target_coor.str()].delfunc();
             } else {
-              grid[target_coor.str()].forceMove(pushTo_coor);
+              L.grid[target_coor.str()].forceMove(pushTo_coor);
             }
           } else {
             // option 2: stuff at border isn't pushed
             if (inBounds(pushTo_coor) && !occupied(pushTo_coor)) {
-              grid[target_coor.str()].forceMove(pushTo_coor);
+              L.grid[target_coor.str()].forceMove(pushTo_coor);
             }
           }
         }*/
@@ -109,19 +108,23 @@ class PullerUp extends Symbol {
   sprite = images[3]
 
   async actfunc() {
+    // more special cases, yay
     // if (checkforblocker(this)) return
-    for (let k = 1; k < N_TILES; k++) {
+    for (let k = 2; k < N_TILES; k++) {
       for (let d = -1; d < 2; d += 2) { // d = -1, 1
         if (k == 1) {
           // special case: adjacent tiles are killed
           await kill_at(this.coords.add(new Coords(k * d, 0)))
 
           // Another option:
-          //_quietDelete(grid[this.coords.add(new Coords(k * d, 0))?.str()])
+          //_quietDelete(L.grid[this.coords.add(new Coords(k * d, 0))?.str()])
           // destroys the thing without triggering special effect
         } else {
           let target_coor = this.coords.add(new Coords(k * d, 0))
           let pullTo_coor = this.coords.add(new Coords((k - 1) * d, 0))
+        // symbol.coords = to_coords
+        // L.grid[to_coords.str()] = symbol
+        // await move_to(target_coor, pullTo_coor)
           await move_to(target_coor, pullTo_coor)
           // await sleep(20)
         }
@@ -143,7 +146,7 @@ class Rotator extends Symbol {
     let rotatingPieces = []
     for (var k = 0; k < 8; k++) {
       let offset_coor = this.coords.add(threebythreeoffsets[k])
-      rotatingPieces.push(grid[offset_coor.str()]) // possibly undefined, but no problem
+      rotatingPieces.push(L.grid[offset_coor.str()]) // possibly undefined, but no problem
     }
     for (var k = 0; k < 8; k++) {
       let offset_coor = this.coords.add(threebythreeoffsets[k])
@@ -151,7 +154,7 @@ class Rotator extends Symbol {
       if (piece !== undefined) {
         if (inBounds(offset_coor)) {
           piece.coords = offset_coor;
-          grid[offset_coor.str()] = piece;
+          L.grid[offset_coor.str()] = piece;
         } else {
           //piece.delfunc() // TODO: THIS DOESN'T AWAIT
           _quietDelete(piece)
@@ -159,15 +162,15 @@ class Rotator extends Symbol {
       } else {
         if (inBounds(offset_coor)) {
           // (this is just a movement)
-          delete grid[offset_coor.str()];
-          // _quietDelete(grid[offset_coor.str()]);
+          delete L.grid[offset_coor.str()];
+          // _quietDelete(L.grid[offset_coor.str()]);
         }
       }
 
       /*if (inBounds(offset_coor)) {
-        grid[offset_coor.str()].delfunc();
+        L.grid[offset_coor.str()].delfunc();
       }*/
-      // rotatingPieces.push(grid[offset_coor.str()]) // possibly undefined, but no problem
+      // rotatingPieces.push(L.grid[offset_coor.str()]) // possibly undefined, but no problem
     }
     await sleep(100)
   }
@@ -184,10 +187,10 @@ class RunAway extends Symbol {
     let valid_k = 0
     for (var k = 0; k < 4; k++) {
       let offset_coor = this.coords.add(offsets[k])
-      if (grid[offset_coor.str()] !== undefined) {
+      if (L.grid[offset_coor.str()] !== undefined) {
         n_closePieces += 1
         valid_k = k
-        closePiece = grid[offset_coor.str()]
+        closePiece = L.grid[offset_coor.str()]
       }
     }
     if (n_closePieces === 1) {
@@ -210,7 +213,7 @@ class RunAway extends Symbol {
         if (occupied(moveTo_coor)) return
       } else {
         // option 2: don't override stuff
-        if (occupied(moveTo_coor)) grid[moveTo_coor.str()].delfunc()
+        if (occupied(moveTo_coor)) L.grid[moveTo_coor.str()].delfunc()
       }*/
       //this.forceMove(moveTo_coor)
       await clone_tile(clonable_coor, old_coor)
@@ -223,13 +226,13 @@ class RunAway extends Symbol {
       if (piece !== undefined) {
         if (inBounds(offset_coor)) {
           piece.coords = offset_coor;
-          grid[offset_coor.str()] = piece;
+          L.grid[offset_coor.str()] = piece;
         } else {
           piece.delfunc()
         }
       } else {
         if (inBounds(offset_coor)) {
-          delete grid[offset_coor.str()];
+          delete L.grid[offset_coor.str()];
         }
       }
     }*/
@@ -242,14 +245,14 @@ class TaxiCab extends Symbol {
     super(coords, () => { }, () => this.taxiCabStuff(), () => { }, images[6]);
   }*/
   async actfunc() {
-    let dists = Object.entries(grid).map(([_coor, thingy]) => {
+    let dists = Object.entries(L.grid).map(([_coor, thingy]) => {
       if (thingy === this) return Infinity
       return taxiCabDist(thingy.coords, this.coords)
     })
     let min_dist = Math.min(...dists)
     if (min_dist < Infinity) {
-      // warning: Object.entries(grid).foreach doesn't work well with animation
-      let level_objects = Object.entries(grid)
+      // warning: Object.entries(L.grid).foreach doesn't work well with animation
+      let level_objects = Object.entries(L.grid)
       for (var k = 0; k < level_objects.length; k++) {
         let [_coor, thingy] = level_objects[k]
         if (taxiCabDist(thingy.coords, this.coords) !== min_dist) continue;
@@ -260,9 +263,9 @@ class TaxiCab extends Symbol {
     }
     /*let new_coors = this.coords.add(new Coords(0, 1))
     if (inBounds(new_coors) && !occupied(new_coors)) {
-      delete grid[this.coords.str()];
+      delete L.grid[this.coords.str()];
       this.coords = new_coors;
-      grid[new_coors.str()] = this;
+      L.grid[new_coors.str()] = this;
     }*/
   }
 }
@@ -305,8 +308,6 @@ class Blocker extends Symbol {
   }*/
 }
 
-var recordedSymbols;
-
 class Preserver extends Symbol {
   sprite = images[9]
   /*constructor(coords) {
@@ -318,7 +319,7 @@ class Preserver extends Symbol {
     // TODO: this wont record hidden state of symbols!
     this.recordedTypes = []
     for (var k = 0; k < 8; k++) {
-      let thingy = grid[this.coords.add(threebythreeoffsets[k]).str()]
+      let thingy = L.grid[this.coords.add(threebythreeoffsets[k]).str()]
       if (thingy !== undefined) {
         this.recordedTypes.push(thingy.constructor)
       } else {
@@ -328,40 +329,40 @@ class Preserver extends Symbol {
   }
 	*/
 	async actfunc() {
-		
+
 		for (const offset of threebythreeoffsets) {
 			let offset_coor = this.coords.add(offset)
 			await kill_at(offset_coor)
 			//await sleep(20)
-      // grid[offset_coor.str()]?.getKilled()
+      // L.grid[offset_coor.str()]?.getKilled()
 		}
-  
-		for (const pair of recordedSymbols) {
+
+		for (const pair of L.recordedSymbols) {
 			let offset_coor = this.coords.add(threebythreeoffsets[pair[0]])
       //clone_tile()
 			if (inBounds(offset_coor)) {
 				await kill_at(offset_coor);
 				makesymbolat(offset_coor, pair[1])
 				await sleep(30)
-        /*let overlapping = grid[offset_coor.str()]
+        /*let overlapping = L.grid[offset_coor.str()]
         if (overlapping === undefined) {
           makesymbolat(offset_coor, this.recordedTypes[k])
         } else {
           if (!DEBUG_MOVE_RESPECTFULLY) {
-            grid[offset_coor.str()].delfunc()
+            L.grid[offset_coor.str()].delfunc()
             makesymbolat(offset_coor, this.recordedTypes[k])
           }
         }*/
 			}
 		}
 	}
-  
+
 	async placefunc() {
-		recordedSymbols = [];
-		for (const asymbol of actions) { //so order among copied symbols stays the same
+		L.recordedSymbols = [];
+		for (const asymbol of L.actions) { //so order among copied symbols stays the same
 			for (var k = 0; k < 8; k++) {
 				if (this.coords.add(threebythreeoffsets[k]).equals(asymbol.coords)) {
-					recordedSymbols.push([k,asymbol.constructor]);
+					L.recordedSymbols.push([k,asymbol.constructor]);
 				}
 			}
 		}
@@ -377,7 +378,7 @@ class OrthoCopier extends Symbol {
     for (var k = 0; k < 4; k++) {
       let offset_coor = this.coords.add(offsets[k])
       if (inBounds(offset_coor) && occupied(offset_coor)) {
-		  if (grid[offset_coor.str()].constructor.name !== "OrthoCopier"){
+		  if (L.grid[offset_coor.str()].constructor.name !== "OrthoCopier"){
 			// makesymbolat(offset_coor, OrthoCopier)
 			await clone_tile(this.coords, offset_coor)
 			await sleep(20)
@@ -396,7 +397,7 @@ class Kamikaze extends Symbol {
 	super.delfunc();
     for (var k = 0; k < 4; k++) {
       let offset_coor = this.coords.add(offsets[k])
-      let thingy = grid[offset_coor.str()]
+      let thingy = L.grid[offset_coor.str()]
       if (!thingy) continue
       if (thingy.constructor.name == "Kamikaze") {
         await kill_at(offset_coor)
@@ -428,44 +429,64 @@ class AboveBelow extends Symbol {
     super(coords, () => { }, () => this.aboveBelow(), () => { }, images[13]);
   }*/
   async actfunc() {
-    let obj_above_type = grid[this.coords.add(new Coords(0, -1)).str()]?.constructor // possibly undefined
-    let obj_below_type = grid[this.coords.add(new Coords(0, 1)).str()]?.constructor // possibly undefined
+    let obj_above_type = L.grid[this.coords.add(new Coords(0, -1)).str()]?.constructor // possibly undefined
+    let obj_below_type = L.grid[this.coords.add(new Coords(0, 1)).str()]?.constructor // possibly undefined
 
     if (obj_above_type === undefined || obj_below_type === undefined) {
       await sleep(20)
       return
     }
 
-    Object.entries(grid).forEach(([coor, thingy]) => {
+    Object.entries(L.grid).forEach(([coor, thingy]) => {
       if (thingy.constructor.name == obj_above_type.name) {
-        grid[coor] = new obj_below_type(thingy.coords);
+        L.grid[coor] = new obj_below_type(thingy.coords);
         // keep action order
-        actions = actions.map(action => {
+        L.actions = L.actions.map(action => {
           if (action !== thingy) return action
-          return grid[coor]
+          return L.grid[coor]
         })
 		/*
         pendingactions = pendingactions.map(action => {
           if (action !== thingy) return action
-          return grid[coor]
+          return L.grid[coor]
         })
 		*/
       } else if (thingy.constructor.name == obj_below_type.name) {
-        grid[coor] = new obj_above_type(thingy.coords);
+        L.grid[coor] = new obj_above_type(thingy.coords);
         // keep action order
-        actions = actions.map(action => {
+        L.actions = L.actions.map(action => {
           if (action !== thingy) return action
-          return grid[coor]
+          return L.grid[coor]
         })
 		/*
         pendingactions = pendingactions.map(action => {
           if (action !== thingy) return action
-          return grid[coor]
+          return L.grid[coor]
         })
 		*/
       }
     })
     await sleep(100)
+  }
+}
+
+class Survivor extends Symbol {
+  sprite = images[12]
+  /*constructor(coords) {
+    super(coords, () => { }, () => { }, () => this.kamikaze(), images[11]);
+  }*/
+  async delfunc() {
+	super.delfunc();
+    for (var k = 0; k < 4; k++) {
+      let offset_coor = this.coords.add(offsets[k])
+      let thingy = L.grid[offset_coor.str()]
+      if (!thingy) continue
+      if (thingy.constructor.name == "Kamikaze") {
+        await kill_at(offset_coor)
+        await sleep(20)
+        // thingy.delfunc() // somehow it doesn't enter in an endless loop, lol
+      }
+    }
   }
 }
 
@@ -478,22 +499,69 @@ let symbol_types = [
   PusherRight,
   PullerUp,
   Rotator,	// 5
-  RunAway, 
+  RunAway,
   TaxiCab,
   Faller,
   Blocker,
   Preserver,	// 10 (a)
-  OrthoCopier, 
+  OrthoCopier,
   Kamikaze,
   LeftSpreader,
   AboveBelow,
-/*Nooper,
-  Nooper, // 15
-  Nooper,*/ 
+/*Nooper, // 15
+  Nooper,
+  Nooper,*/
 ]
 
-let symbols_used = Array(symbol_types.length).fill(false)
+let level_goals = [
+  [
+    [-1, -1, -1],
+    [-1,  8, -1],
+    [-1,  2, -1],
+    [-1, -1, -1],
+  ],
+  [
+    [-1,  8, -1],
+    [ 3,  2, 13],
+    [-1,  4, -1],
+  ],
+]
 
+function preload_level(goal, n) {
+  return {
+    symbols_used: Array(symbol_types.length).fill(false),
+    grid: {},
+    actions: [],
+    recordedSymbols: [],
+    goal: level_goals[n],
+    n: n,
+
+    grid_undos: [],
+    actions_undos: [],
+    symbols_used_undos: [],
+  }
+}
+
+function reset_level(level) {
+  levels[level.n] = preload_level(level_goals[level.n], level.n)
+  /*level.symbols_used = Array(symbol_types.length).fill(false)
+  level.grid = {}
+  level.actions = []
+  level.recordedSymbols = []
+
+  grid_undos: [],
+  actions_undos: [],
+  symbols_used_undos: [],*/
+}
+
+
+
+let levels = level_goals.map(preload_level)
+let L = levels[0]
+
+// let symbols_used = Array(symbol_types.length).fill(false)
+
+let SKIP_ANIMS = false
 
 let TILE = 50
 let ACTION_TIME = 100
@@ -505,6 +573,8 @@ let X_TABLEAU = 600
 let Y_TABLEAU = 20
 let TAB_COLS = 3
 let TAB_ROWS = Math.ceil(symbol_types.length/TAB_COLS)
+let X_GOAL = 600
+let Y_GOAL = (TAB_ROWS + 1) * TILE
 
 let DEBUG_PUSH_OFF_BORDER = false
 let DEBUG_MOVE_RESPECTFULLY = false
@@ -521,6 +591,7 @@ let extra_draw_code = []
 
 function drawgrid() {
   //ctx.lineWidth = 3;
+  ctx.beginPath()
   for (let i = 0; i <= N_TILES; i++) {
     ctx.moveTo(X_GRID, Y_GRID + TILE * i)
     ctx.lineTo(X_GRID + N_TILES * TILE, Y_GRID + TILE * i)
@@ -531,7 +602,7 @@ function drawgrid() {
 }
 
 function drawgridelements() {
-  for (const [_key, value] of Object.entries(grid)) {
+  for (const [_key, value] of Object.entries(L.grid)) {
     ctx.drawImage(value.sprite, X_GRID + TILE * value.coords.x, Y_GRID + TILE * value.coords.y);
   }
 }
@@ -539,9 +610,9 @@ function drawgridelements() {
 function drawactionqueue() { //don't think we need this anymore
   ctx.beginPath()
   ctx.moveTo(0, canvas.height - TILE);
-  ctx.lineTo(TILE * actions.length, canvas.height - TILE);
-  for (let i = 0; i < actions.length; i++) {
-    ctx.drawImage(actions[i].sprite, TILE * i, canvas.height - TILE);
+  ctx.lineTo(TILE * L.actions.length, canvas.height - TILE);
+  for (let i = 0; i < L.actions.length; i++) {
+    ctx.drawImage(L.actions[i].sprite, TILE * i, canvas.height - TILE);
     ctx.moveTo(TILE * (i + 1), canvas.height - TILE);
     ctx.lineTo(TILE * (i + 1), canvas.height);
   }
@@ -550,13 +621,14 @@ function drawactionqueue() { //don't think we need this anymore
 
 function drawactionnumbers() {
 	if (DEBUG_HIDE_NUMBERS) { return }
-	ctx.font = '20px sans-serrif'	
-	for (let i = 0; i < actions.length; i++) {
-		ctx.strokeText(i.toString().padStart(2,'0'),X_GRID + TILE * actions[i].coords.x,Y_GRID + TILE * actions[i].coords.y + 20) //TODO make this not awful (20)
+	ctx.font = '20px sans-serrif'
+	for (let i = 0; i < L.actions.length; i++) {
+		ctx.strokeText(i.toString().padStart(2,'0'),X_GRID + TILE * L.actions[i].coords.x,Y_GRID + TILE * L.actions[i].coords.y + 20) //TODO make this not awful (20)
 	}
 }
 
 function drawtableau() {
+  ctx.beginPath()
 	for (let i = 0; i <= TAB_COLS; i++) {
 		ctx.moveTo(X_TABLEAU + TILE * i, Y_TABLEAU)
 		ctx.lineTo(X_TABLEAU + TILE * i, Y_TABLEAU + TAB_ROWS * TILE)
@@ -570,11 +642,11 @@ function drawtableau() {
 
 function drawtableauelements() {
 	for (let i = 0; i < symbol_types.length; i++){
-		if(!symbols_used[i]){
+		if(!L.symbols_used[i]){
 			ctx.drawImage((new symbol_types[i]()).sprite, X_TABLEAU + (i % TAB_COLS)*TILE, Y_TABLEAU + Math.floor(i/TAB_COLS)*TILE)
 		}
 	}
-	
+
 }
 
 function drawheldtile() {
@@ -583,6 +655,29 @@ function drawheldtile() {
 	}
 }
 
+function drawgoalarea() {
+  let h = L.goal.length;
+  let w = L.goal[0].length;
+
+  ctx.beginPath()
+  for (let i = 0; i <= w; i++) {
+		ctx.moveTo(X_GOAL + TILE * i, Y_GOAL)
+		ctx.lineTo(X_GOAL + TILE * i, Y_GOAL + h * TILE)
+	}
+	for (let i = 0; i <= h; i++) {
+		ctx.moveTo(X_GOAL, Y_GOAL + TILE * i)
+		ctx.lineTo(X_GOAL + w * TILE, Y_GOAL + TILE * i)
+	}
+	ctx.stroke()
+
+  for (let i = 0; i < w; i++){
+    for (let j = 0; j<h; j++) {
+      if (L.goal[j][i] !== -1) {
+        ctx.drawImage((new symbol_types[L.goal[j][i]]()).sprite, X_GOAL + TILE * i, Y_GOAL + j * TILE);
+      }
+    }
+	}
+}
 
 window.addEventListener("load", _e => {
   // window.dispatchEvent(new Event('resize'));
@@ -592,54 +687,69 @@ window.addEventListener("load", _e => {
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-  for (let k = 0; k < 14; k++) {
-	if(DEBUG_ALLOW_KEYPLACEMENT){
-		if (wasKeyPressed(debug_keys[k])) {
-			let coords = new Coords(Math.floor((mouse.x - X_GRID) / TILE), Math.floor((mouse.y - Y_GRID) / TILE))
-			if(inBounds(coords) && !doing_stuff && !occupied(coords)){ //maybe if doing stuff, anim should be hurried somehow (even if occupied)?
-				placesymbolat(coords, symbol_types[k])
-			}
-		}
-	}
-	if(wasButtonPressed('left') && held_tile == null){ //held_tile should always be null, just hedging
+  if(DEBUG_ALLOW_KEYPLACEMENT) {
+    for (let k = 0; k < 14; k++) {
+  		if (wasKeyPressed(debug_keys[k])) {
+  			let coords = new Coords(Math.floor((mouse.x - X_GRID) / TILE), Math.floor((mouse.y - Y_GRID) / TILE))
+  			if(inBounds(coords) && !doing_stuff && !occupied(coords)){ //maybe if doing stuff, anim should be hurried somehow (even if occupied)?
+  				placesymbolat(coords, symbol_types[k])
+  			}
+  		}
+  	}
+  }
+	if(wasButtonPressed('left') && held_tile == null) { //held_tile should always be null, just hedging
 		let coords = new Coords(Math.floor((mouse.x - X_TABLEAU) / TILE), Math.floor((mouse.y - Y_TABLEAU) / TILE))
 		if( coords.x >= 0 && coords.x < TAB_COLS && coords.y >= 0 && coords.y < TAB_ROWS) {
 			let index = coords.x + TAB_COLS * coords.y;
-			if ( !symbols_used[index] ) {
-				symbols_used[index] = true;
+			if ( !L.symbols_used[index] ) {
+				L.symbols_used[index] = true;
 				held_tile = index;
 			}
 		}
 	}
-	
-	if(wasButtonReleased('left') && held_tile !== null){
+
+	if(wasButtonReleased('left') && held_tile !== null) {
 		let coords = new Coords(Math.floor((mouse.x - X_GRID) / TILE), Math.floor((mouse.y - Y_GRID) / TILE))
 		if(inBounds(coords) && !doing_stuff && !occupied(coords)){ //maybe if doing stuff, anim should be hurried somehow (even if occupied maybe)?
 			placesymbolat(coords, symbol_types[held_tile]);
 			held_tile = null;
 		}
 		else {
-			symbols_used[held_tile] = false;
+			L.symbols_used[held_tile] = false;
 			held_tile = null;
 		}
-	}
   }
+
   if (wasKeyPressed(' ') && DEBUG_ALLOW_PASS_WITH_SPACE) doturn()
 
-  if (extra_draw_code.length > 0) extra_draw_code[extra_draw_code.length - 1]()
+  if (wasKeyPressed('r')) reset_level(L)
+  if (wasKeyPressed('z')) undo()
+
+  if (wasKeyPressed('m')) {
+    L = levels[L.n + 1]
+  }
+  if (wasKeyPressed('n')) {
+    L = levels[L.n - 1]
+  }
+
+  // if (extra_draw_code.length > 0) extra_draw_code[extra_draw_code.length - 1]()
+  extra_draw_code.forEach(f => f());
+
 
   drawgridelements();
 
   drawgrid();
 
   //drawactionqueue();
-  
+
   drawactionnumbers();
-  
+
   drawtableauelements();
-  
+
   drawtableau();
-  
+
+  drawgoalarea();
+
   drawheldtile();
   //something goes here
 
@@ -671,7 +781,7 @@ class Coords {
   clone() {
     return new Coords(this.x, this.y)
   }
-  
+
   equals(c2) {
 	  return ((this.x == c2.x) && (this.y == c2.y));
   }
@@ -683,20 +793,40 @@ var threebythreeoffsets = [new Coords(-1, -1), new Coords(0, -1), new Coords(1, 
 new Coords(1, 0),
 new Coords(1, 1), new Coords(0, 1), new Coords(-1, 1),
 new Coords(-1, 0)]; //rotational order
-var grid = {};
 
-var actions = [];
 
 //var pendingactions = [];
 
 function _quietDelete(symbol) {
   if (symbol === undefined) return;
   symbol.deleted = true // idk if this will be used elsewhere
-  delete grid[symbol.coords.str()];
+  delete L.grid[symbol.coords.str()];
   //actions = actions.filter(x => x !== symbol) //replaced by below function call
   removefromactionsandmaybemovebackwards(symbol);
   //pendingactions = pendingactions.filter(x => x !== symbol)
 }
+
+// Warning: doesn't call the delfunc!!
+/*function _quietMove(from_coords, to_coords) {
+  if (!inBounds(from_coords)) {
+    return
+  }
+  let symbol = L.grid[from_coords.str()]
+  if (symbol === undefined) {
+    return;
+  }
+  if (!inBounds(to_coords)) {
+    _quietDelete(symbol);
+    return true
+  }
+  let occupying_symbol = L.grid[to_coords.str()]
+  if (occupying_symbol) {
+    _quietDelete(occupying_symbol);
+  }
+  delete L.grid[from_coords.str()];
+  symbol.coords = to_coords
+  L.grid[to_coords.str()] = symbol
+}*/
 
 // DESIGN DECISIONS
 // if we use these helper functions consistently, we can quickly adjust the game's behaviour
@@ -705,7 +835,7 @@ function _quietDelete(symbol) {
 
 // Called by Bomb, TaxiCab, ???; explicitly kill the symbol
 async function kill_at(coords) {
-  let symbol = grid[coords.str()]
+  let symbol = L.grid[coords.str()]
   if (symbol === undefined) {
     // this will be used for graphics
     return true;
@@ -719,22 +849,26 @@ async function kill_at(coords) {
 }
 
 async function move_to(from_coords, to_coords) {
-  console.log("called move_to")
+  // console.log("called move_to")
   extra_draw_code.push(() => {
     ctx.fillStyle = "red"
-    ctx.fillRect(from_coords.x * TILE, from_coords.y * TILE, TILE, TILE)
-    ctx.fillRect(to_coords.x * TILE, to_coords.y * TILE, TILE, TILE)
+    if (inBounds(from_coords)) ctx.fillRect(from_coords.x * TILE + X_GRID, from_coords.y * TILE + Y_GRID, TILE, TILE)
+    if (inBounds(to_coords)) ctx.fillRect(to_coords.x * TILE + X_GRID, to_coords.y * TILE + Y_GRID, TILE, TILE)
   })
-  if (!inBounds(from_coords)) return true
-  let symbol = grid[from_coords.str()]
+  if (!inBounds(from_coords)) {
+    extra_draw_code.pop()
+    return true
+  }
+  let symbol = L.grid[from_coords.str()]
   if (symbol === undefined) {
     // this will be used for graphics
-    await sleep(200)
+    await sleep(50)
     extra_draw_code.pop()
     return true;
   }
   if (!inBounds(to_coords)) {
     _quietDelete(symbol);
+    extra_draw_code.pop()
     return true
 
     // Another option:
@@ -744,7 +878,7 @@ async function move_to(from_coords, to_coords) {
     //symbol.delfunc() // tigger special effects when falling out of the border
     //return true
   }
-  let occupying_symbol = grid[to_coords.str()]
+  let occupying_symbol = L.grid[to_coords.str()]
   if (occupying_symbol) {
     await kill_at(to_coords)
 
@@ -755,9 +889,9 @@ async function move_to(from_coords, to_coords) {
     //_quietDelete(occupying_symbol) // delete without triggering special effects
   }
 
-  delete grid[from_coords.str()];
+  delete L.grid[from_coords.str()];
   symbol.coords = to_coords
-  grid[to_coords.str()] = symbol
+  L.grid[to_coords.str()] = symbol
   await sleep(100)
   extra_draw_code.pop()
 
@@ -768,14 +902,18 @@ async function move_to(from_coords, to_coords) {
 async function activate_at(coords) {
   extra_draw_code.push(() => {
     ctx.fillStyle = "red"
-    ctx.fillRect(coords.x * TILE - 20, coords.y * TILE - 20, TILE + 40, TILE + 40)
+    ctx.fillRect(coords.x * TILE - TILE*.1 + X_GRID, coords.y * TILE - TILE*.1 + Y_GRID, TILE * 1.2, TILE  * 1.2)
   })
-  let symbol = grid[coords.str()]
+  let symbol = L.grid[coords.str()]
   if (symbol === undefined) {
     // this will be used for graphics
+    extra_draw_code.pop()
     return true;
   }
-  if (checkforblocker(symbol)) return false
+  if (checkforblocker(symbol)) {
+    extra_draw_code.pop()
+    return false
+  }
   await symbol.actfunc()
   extra_draw_code.pop()
   return true
@@ -787,13 +925,13 @@ async function clone_tile(from_coords, to_coords) {
   // Another option:
   //_quietDelete(...) etc
 
-  let symbol = grid[from_coords.str()]
+  let symbol = L.grid[from_coords.str()]
   if (symbol === undefined) {
     return true
   }
 
   let new_symbol = new symbol.constructor(to_coords)
-  grid[to_coords.str()] = new_symbol
+  L.grid[to_coords.str()] = new_symbol
   insertbeforecurrentaction(new_symbol);
 
   // extremely hacky, oops
@@ -810,7 +948,7 @@ function taxiCabDist(coor1, coor2) {
 function checkforblocker(symbol) {
   if (symbol.constructor.name == "Blocker") return false // easier to handle the special case here
   for (const offset of offsets) {
-    let target = grid[symbol.coords.add(offset).str()];
+    let target = L.grid[symbol.coords.add(offset).str()];
     if (typeof target !== 'undefined') {
       if (target.constructor.name == "Blocker") {
         return true;
@@ -822,7 +960,7 @@ function checkforblocker(symbol) {
 
 let images = []
 
-for (k = 0; k < 15; k++) {
+for (k = 0; k < 19; k++) {
   let cur_img = new Image();
   cur_img.src = "s" + k.toString() + ".png";
   images.push(cur_img)
@@ -833,33 +971,33 @@ function inBounds(coords) {
 }
 
 function occupied(coords) {
-  let target = grid[coords.str()];
+  let target = L.grid[coords.str()];
   return (typeof target !== 'undefined');
 }
 
 function makesymbolat(coords, symboltype) { //called when a symbol makes a symbol
   if (symboltype === undefined) {
     // extremely hacky special case
-    if (grid[coords.str()]) grid[coords.str()].delfunc()
+    if (L.grid[coords.str()]) L.grid[coords.str()].delfunc()
   } else {
     s = new symboltype(coords);
-    grid[coords.str()] = s;
-    insertbeforecurrentaction(s); 
+    L.grid[coords.str()] = s;
+    insertbeforecurrentaction(s);
     return s;
   }
 }
 
 async function placesymbolat(coords, symboltype) { //called when the player places a symbol, should potentially remove it from bank too
   s = new symboltype(coords);
-  grid[coords.str()] = s;
+  L.grid[coords.str()] = s;
   await s.placefunc();
-  actions.push(s);
+  L.actions.push(s);
   doturn();
 }
 
 var insertbeforecurrentaction = null; //this is probably a bad idea but it works
 
-var removefromactionsandmaybemovebackwards = null; //this is needed even if insertion behavior is reverted, since otherwise deleting something from actions that you've already acted will make you skip some other action 
+var removefromactionsandmaybemovebackwards = null; //this is needed even if insertion behavior is reverted, since otherwise deleting something from actions that you've already acted will make you skip some other action
 
 let doing_stuff = false
 async function doturn() {
@@ -871,41 +1009,105 @@ async function doturn() {
   })*/
   /*action_queue_pos = 0
   do_cur_action()*/
+
+  L.grid_undos.push(grid2blob(L.grid))
+  L.actions_undos.push(grid2blob(L.actions))
+  L.symbols_used_undos.push([...L.symbols_used])
+
   let i = 0;
   doing_stuff = true
   insertbeforecurrentaction = (symbol) => {
-	  actions.splice(i, 0, symbol);
+	  L.actions.splice(i + 1, 0, symbol);
 	  i += 1
   }
   removefromactionsandmaybemovebackwards = (symbol) => {
-	  if( actions.findIndex(x => x === symbol) <= i){
+	  if( L.actions.findIndex(x => x === symbol) <= i){
 		  i -= 1;
 	  }
-	  actions = actions.filter(x => x !== symbol)
+	  L.actions = L.actions.filter(x => x !== symbol)
   }
-  while (i < actions.length) {
-    // await actions[i].actfunc()
-    await activate_at(actions[i].coords)
+  while (i < L.actions.length) {
+    // await L.actions[i].actfunc()
+    await activate_at(L.actions[i].coords)
     // await sleep(100) // TODO: this should be in the things actfuncs, not here
     i += 1
-	
+
   }
   insertbeforecurrentaction = null; // want to be warned if this is called when it shouldn't be
-  removefromactionsandmaybemovebackwards = null; // as above 
-  
-  
+  removefromactionsandmaybemovebackwards = null; // as above
+
+
   doing_stuff = false
   //actions = actions.concat(pendingactions)
   //pendingactions = []
   console.log("finished all actions")
 }
 
+function check_won(level) {
+  let h = level.goal.length;
+  let w = level.goal[0].length;
 
+  for (let x=0; x<N_TILES - w; x++) {
+    for (let y=0; y<N_TILES - h; y++) {
+      // check if the rect at x,y has won the level
+      let skip = false
+      for (let i=0; i<w; i++) {
+        if (skip) continue
+        for (let j=0; j<h; j++) {
+          if (skip) continue
 
+          let real_tile = level.grid[new Coords(i+x,j+y).str()]?.constructor
+          let goal_tile_n = level.goal[j][i]
+          if (goal_tile_n === -1) {
+            if (real_tile !== undefined) skip = true
+          } else {
+            let goal_tile = symbol_types[goal_tile_n]
+            if (real_tile !== goal_tile) {
+              skip = true
+            }
+          }
+        }
+      }
+      if (!skip) {
+        return true
+      }
+    }
+  }
+  return false
+}
 
+function grid2blob(grid) {
+  return Object.entries(grid).map(([_coor, symbol]) => {
+    return [symbol.coords.x, symbol.coords.y, symbol.constructor]
+  })
+}
 
+function blob2grid(blob) {
+  let grid = {}
+  blob.forEach(([x, y, f]) => {
+    let coords = new Coords(x, y)
+    grid[coords.str()] = new f(coords)
+  });
+  return grid
+}
 
+function actions2blob(actions) {
+  return actions.map(action => {
+    return [action.coords.x, actions.coords.y]
+  })
+}
 
+function blob2actions(blob, grid) {
+  return blob.map(([x, y]) => {
+    return grid[new Coords(x, y).str()]
+  })
+}
+
+function undo() {
+  L.grid = blob2grid(L.grid_undos.pop())
+  L.actions = blob2actions(L.actions_undos.pop(), L.grid)
+  L.symbols_used = L.symbols_used_undos.pop()
+}
 
 
 // engine stuff

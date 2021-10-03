@@ -21,11 +21,11 @@ class Symbol {
   }
 
   async actfunc() {
-    await sleep(20)
+    await sleep(100)
   }
 
   async delfunc() {
-	_quietDelete(this);
+   _quietDelete(this);
   }
 
 }
@@ -110,7 +110,7 @@ class PullerUp extends Symbol {
   async actfunc() {
     // more special cases, yay
     // if (checkforblocker(this)) return
-    for (let k = 2; k < N_TILES; k++) {
+    for (let k = 1; k < N_TILES; k++) {
       for (let d = -1; d < 2; d += 2) { // d = -1, 1
         if (k == 1) {
           // special case: adjacent tiles are killed
@@ -148,6 +148,7 @@ class Rotator extends Symbol {
       let offset_coor = this.coords.add(threebythreeoffsets[k])
       rotatingPieces.push(L.grid[offset_coor.str()]) // possibly undefined, but no problem
     }
+    let pending_kill = null
     for (var k = 0; k < 8; k++) {
       let offset_coor = this.coords.add(threebythreeoffsets[k])
       let piece = rotatingPieces[(k + 1) % 8]
@@ -156,8 +157,10 @@ class Rotator extends Symbol {
           piece.coords = offset_coor;
           L.grid[offset_coor.str()] = piece;
         } else {
+          pending_kill = piece
           //piece.delfunc() // TODO: THIS DOESN'T AWAIT
-          _quietDelete(piece)
+          // _quietDelete(piece)
+          // await
         }
       } else {
         if (inBounds(offset_coor)) {
@@ -171,6 +174,9 @@ class Rotator extends Symbol {
         L.grid[offset_coor.str()].delfunc();
       }*/
       // rotatingPieces.push(L.grid[offset_coor.str()]) // possibly undefined, but no problem
+    }
+    if (pending_kill) {
+      await kill_at
     }
     await sleep(100)
   }
@@ -399,11 +405,11 @@ class Kamikaze extends Symbol {
       let offset_coor = this.coords.add(offsets[k])
       let thingy = L.grid[offset_coor.str()]
       if (!thingy) continue
-      if (thingy.constructor.name == "Kamikaze") {
+      //if (thingy.constructor.name == "Kamikaze") {
         await kill_at(offset_coor)
-        await sleep(20)
+        await sleep(50)
         // thingy.delfunc() // somehow it doesn't enter in an endless loop, lol
-      }
+      //}
     }
   }
 }
@@ -471,22 +477,17 @@ class AboveBelow extends Symbol {
 }
 
 class Survivor extends Symbol {
-  sprite = images[12]
-  /*constructor(coords) {
-    super(coords, () => { }, () => { }, () => this.kamikaze(), images[11]);
-  }*/
+  sprite = images[15]
+
   async delfunc() {
-	super.delfunc();
+    // super.delfunc();
     for (var k = 0; k < 4; k++) {
       let offset_coor = this.coords.add(offsets[k])
-      let thingy = L.grid[offset_coor.str()]
-      if (!thingy) continue
-      if (thingy.constructor.name == "Kamikaze") {
-        await kill_at(offset_coor)
-        await sleep(20)
-        // thingy.delfunc() // somehow it doesn't enter in an endless loop, lol
+      if (inBounds(offset_coor) && !occupied(offset_coor)) {
+        await clone_tile(this.coords, offset_coor)
       }
     }
+    _quietDelete(this)
   }
 }
 
@@ -508,8 +509,8 @@ let symbol_types = [
   Kamikaze,
   LeftSpreader,
   AboveBelow,
-/*Nooper, // 15
-  Nooper,
+  Survivor, // 15
+  /*Nooper,
   Nooper,*/
 ]
 
@@ -535,6 +536,7 @@ function preload_level(goal, n) {
     recordedSymbols: [],
     goal: level_goals[n],
     n: n,
+    victory_rectangle: null,
 
     grid_undos: [],
     actions_undos: [],
@@ -659,6 +661,14 @@ function drawgoalarea() {
   let h = L.goal.length;
   let w = L.goal[0].length;
 
+  for (let i = 0; i < w; i++){
+    for (let j = 0; j<h; j++) {
+      if (L.goal[j][i] !== -1) {
+        ctx.drawImage((new symbol_types[L.goal[j][i]]()).sprite, X_GOAL + TILE * i, Y_GOAL + j * TILE);
+      }
+    }
+	}
+
   ctx.beginPath()
   for (let i = 0; i <= w; i++) {
 		ctx.moveTo(X_GOAL + TILE * i, Y_GOAL)
@@ -669,14 +679,14 @@ function drawgoalarea() {
 		ctx.lineTo(X_GOAL + w * TILE, Y_GOAL + TILE * i)
 	}
 	ctx.stroke()
+}
 
-  for (let i = 0; i < w; i++){
-    for (let j = 0; j<h; j++) {
-      if (L.goal[j][i] !== -1) {
-        ctx.drawImage((new symbol_types[L.goal[j][i]]()).sprite, X_GOAL + TILE * i, Y_GOAL + j * TILE);
-      }
-    }
-	}
+function draw_victory_area() {
+  if (L.victory_rectangle) {
+    ctx.fillStyle = "green"
+    let [x,y,w,h] = L.victory_rectangle
+    ctx.fillRect(X_GRID + TILE * x, Y_GRID + TILE * y, TILE*w, TILE*h)
+  }
 }
 
 window.addEventListener("load", _e => {
@@ -720,6 +730,7 @@ function draw() {
 		}
   }
 
+  // warning: messes up undo
   if (wasKeyPressed(' ') && DEBUG_ALLOW_PASS_WITH_SPACE) doturn()
 
   if (wasKeyPressed('r')) reset_level(L)
@@ -735,6 +746,7 @@ function draw() {
   // if (extra_draw_code.length > 0) extra_draw_code[extra_draw_code.length - 1]()
   extra_draw_code.forEach(f => f());
 
+  draw_victory_area();
 
   drawgridelements();
 
@@ -833,16 +845,25 @@ function _quietDelete(symbol) {
 // (it will also help with graphics)
 // These should be understood as commands; they will return true if the action is succesful
 
-// Called by Bomb, TaxiCab, ???; explicitly kill the symbol
-async function kill_at(coords) {
+async function kill_at(coords, explicit_kill=true) {
+  if (explicit_kill) {
+    extra_draw_code.push(() => {
+      ctx.fillStyle = "red"
+      if (inBounds(coords)) ctx.fillRect(coords.x * TILE + X_GRID, coords.y * TILE + Y_GRID, TILE, TILE)
+    })
+  }
+
   let symbol = L.grid[coords.str()]
   if (symbol === undefined) {
     // this will be used for graphics
+    await sleep(50)
+    if (explicit_kill) extra_draw_code.pop()
     return true;
   } else {
     // kill triggers the del action
     await symbol.delfunc();
-
+    await sleep(50)
+    if (explicit_kill) extra_draw_code.pop()
     //_quietDelete(symbol); //delfuncs must do this themself (but may do it at any point in their execution)
     return true;
   }
@@ -860,6 +881,11 @@ async function move_to(from_coords, to_coords) {
     return true
   }
   let symbol = L.grid[from_coords.str()]
+  let occupying_symbol = L.grid[to_coords.str()]
+  /*if (symbol === undefined && occupying_symbol === undefined) {
+    extra_draw_code.pop() // don't wait
+    return true;
+  }*/
   if (symbol === undefined) {
     // this will be used for graphics
     await sleep(50)
@@ -867,7 +893,8 @@ async function move_to(from_coords, to_coords) {
     return true;
   }
   if (!inBounds(to_coords)) {
-    _quietDelete(symbol);
+    // _quietDelete(symbol);
+    await kill_at(from_coords)
     extra_draw_code.pop()
     return true
 
@@ -878,7 +905,6 @@ async function move_to(from_coords, to_coords) {
     //symbol.delfunc() // tigger special effects when falling out of the border
     //return true
   }
-  let occupying_symbol = L.grid[to_coords.str()]
   if (occupying_symbol) {
     await kill_at(to_coords)
 
@@ -1045,6 +1071,8 @@ async function doturn() {
   //actions = actions.concat(pendingactions)
   //pendingactions = []
   console.log("finished all actions")
+
+  L.victory_rectangle = check_won(L)
 }
 
 function check_won(level) {
@@ -1073,11 +1101,11 @@ function check_won(level) {
         }
       }
       if (!skip) {
-        return true
+        return [x,y,w,h]
       }
     }
   }
-  return false
+  return null
 }
 
 function grid2blob(grid) {
@@ -1111,6 +1139,7 @@ function undo() {
   L.grid = blob2grid(L.grid_undos.pop())
   L.actions = blob2actions(L.actions_undos.pop(), L.grid)
   L.symbols_used = L.symbols_used_undos.pop()
+  L.victory_rectangle = check_won(L)
 }
 
 
@@ -1181,6 +1210,7 @@ function wasKeyReleased(k) {
   return (!keyboard[k] || false) && (keyboard_prev[k] || false);
 }
 
+DEBUG_TIME_MULTI = 1
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise(resolve => setTimeout(resolve, DEBUG_TIME_MULTI * ms));
 }

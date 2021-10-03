@@ -335,21 +335,25 @@ class Preserver extends Symbol {
   }
 	*/
 	async actfunc() {
-
-		for (const offset of threebythreeoffsets) {
+		/*for (const offset of threebythreeoffsets) {
 			let offset_coor = this.coords.add(offset)
 			await kill_at(offset_coor)
 			//await sleep(20)
       // L.grid[offset_coor.str()]?.getKilled()
-		}
+		}*/
+
+    /*for (let k=0; k<8; k++) {
+      let [_k, symbol] =
+    }*/
 
 		for (const pair of L.recordedSymbols) {
 			let offset_coor = this.coords.add(threebythreeoffsets[pair[0]])
       //clone_tile()
 			if (inBounds(offset_coor)) {
-				await kill_at(offset_coor);
-				makesymbolat(offset_coor, pair[1])
-				await sleep(30)
+				/*await kill_at(offset_coor);
+				makesymbolat(offset_coor, pair[1])*/
+        await clone_tile_from_type(pair[1], offset_coor)
+				await sleep(50)
         /*let overlapping = L.grid[offset_coor.str()]
         if (overlapping === undefined) {
           makesymbolat(offset_coor, this.recordedTypes[k])
@@ -1002,9 +1006,29 @@ async function clone_tile(from_coords, to_coords) {
   insertbeforecurrentaction(new_symbol);
 
   // extremely hacky, oops
-  if (new_symbol.constructor.name === "Preserver") {
+  /*if (new_symbol.constructor.name === "Preserver") {
     new_symbol.recordedTypes = symbol.recordedTypes
+  }*/
+}
+
+async function clone_tile_from_type(tile_type, to_coords) {
+  if (!inBounds(to_coords)) return true // nothing to be done
+  await kill_at(to_coords)
+  // Another option:
+  //_quietDelete(...) etc
+
+  if (tile_type === undefined) {
+    return true
   }
+
+  let new_symbol = new tile_type(to_coords)
+  L.grid[to_coords.str()] = new_symbol
+  insertbeforecurrentaction(new_symbol);
+
+  // extremely hacky, oops
+  /*if (new_symbol.constructor.name === "Preserver") {
+    new_symbol.recordedTypes = symbol.recordedTypes
+  }*/
 }
 
 
@@ -1072,7 +1096,7 @@ async function placesymbolat(coords, symboltype) { //called when the player plac
   L.grid[coords.str()] = s;
   await s.placefunc();
   L.actions.push(s);
-  doturn();
+  await doturn();
 
   L.grid_undos = L.grid_undos.slice(0, L.undo_head + 1)
   L.actions_undos = L.actions_undos.slice(0, L.undo_head + 1)
@@ -1099,6 +1123,7 @@ async function doturn() {
   if (doing_stuff) {
     throw new Error("called do turn while another turn was in progress")
   }
+  L.victory_rectangle = null
   /*actions.forEach(s => {
     s.actfunc()
   })*/
@@ -1120,6 +1145,7 @@ async function doturn() {
   while (i < L.actions.length) {
     // await L.actions[i].actfunc()
     await activate_at(L.actions[i].coords)
+    // L.victory_rectangle = check_won()
     // await sleep(100) // TODO: this should be in the things actfuncs, not here
     i += 1
 
@@ -1133,7 +1159,7 @@ async function doturn() {
   //pendingactions = []
   console.log("finished all actions")
 
-  //L.victory_rectangle = check_won()
+  L.victory_rectangle = check_won()
 }
 
 function check_won() {

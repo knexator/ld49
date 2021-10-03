@@ -538,22 +538,24 @@ function preload_level(goal, n) {
     n: n,
     victory_rectangle: null,
 
-    grid_undos: [],
-    actions_undos: [],
-    symbols_used_undos: [],
+    undo_head: 0, // position in the undo queue (usually last, except right after undos)
+    grid_undos: [grid2blob({})],
+    actions_undos: [actions2blob([])],
+    symbols_used_undos: [Array(symbol_types.length).fill(false)],
   }
 }
 
-function reset_level(level) {
-  levels[level.n] = preload_level(level_goals[level.n], level.n)
-  /*level.symbols_used = Array(symbol_types.length).fill(false)
-  level.grid = {}
-  level.actions = []
-  level.recordedSymbols = []
+function reset() {
+  L.grid = {}
+  L.actions = []
+  L.symbols_used = Array(symbol_types.length).fill(false)
 
-  grid_undos: [],
-  actions_undos: [],
-  symbols_used_undos: [],*/
+  // undo: store how the world is after the action
+  L.grid_undos.push(grid2blob(L.grid))
+  L.actions_undos.push(actions2blob(L.actions))
+  L.symbols_used_undos.push([...L.symbols_used])
+  L.undo_head += 1
+  L.victory_rectangle = check_won()
 }
 
 
@@ -565,18 +567,20 @@ let L = levels[0]
 
 let SKIP_ANIMS = false
 
-let TILE = 50
+let TILE = canvas.width / 16
 let ACTION_TIME = 100
 let N_TILES = 10
 
-let X_GRID = 30 //these values should be able to be messed with and not cause problems
-let Y_GRID = 20
-let X_TABLEAU = 600
-let Y_TABLEAU = 20
-let TAB_COLS = 3
-let TAB_ROWS = Math.ceil(symbol_types.length/TAB_COLS)
-let X_GOAL = 600
-let Y_GOAL = (TAB_ROWS + 1) * TILE
+let X_GRID = TILE / 3 //these values should be able to be messed with and not cause problems
+let Y_GRID = TILE / 3
+let X_TABLEAU = canvas.width - TILE*5 - TILE / 3
+let Y_TABLEAU = TILE / 3 + TILE
+let TAB_COLS = 5
+let TAB_ROWS = 4 // Math.ceil(symbol_types.length/TAB_COLS)
+let X_GOAL = X_TABLEAU
+let Y_GOAL = canvas.height - 5 * TILE - TILE / 3
+let X_BUTTON_BAR = X_GRID
+let Y_BUTTON_BAR = canvas.height - TILE - TILE / 3
 
 let DEBUG_PUSH_OFF_BORDER = false
 let DEBUG_MOVE_RESPECTFULLY = false
@@ -590,6 +594,14 @@ let DEBUG_ALLOW_PASS_WITH_SPACE = true
 let held_tile = null;
 
 let extra_draw_code = []
+
+let buttons = [
+  [X_BUTTON_BAR, Y_BUTTON_BAR, TILE*2, TILE, prevLevel],
+  [X_BUTTON_BAR + TILE*2, Y_BUTTON_BAR, TILE*2, TILE, undo],
+  [X_BUTTON_BAR + TILE*4, Y_BUTTON_BAR, TILE*2, TILE, reset],
+  [X_BUTTON_BAR + TILE*6, Y_BUTTON_BAR, TILE*2, TILE, redo],
+  [X_BUTTON_BAR + TILE*8, Y_BUTTON_BAR, TILE*2, TILE, nextLevel],
+]
 
 function drawgrid() {
   //ctx.lineWidth = 3;
@@ -661,22 +673,27 @@ function drawgoalarea() {
   let h = L.goal.length;
   let w = L.goal[0].length;
 
+  ctx.strokeRect(X_GOAL, Y_GOAL, TILE * 5, TILE * 5)
+
+  let off_x = TILE * (5 - w) / 2
+  let off_y = TILE * (5 - h) / 2
+
   for (let i = 0; i < w; i++){
     for (let j = 0; j<h; j++) {
       if (L.goal[j][i] !== -1) {
-        ctx.drawImage((new symbol_types[L.goal[j][i]]()).sprite, X_GOAL + TILE * i, Y_GOAL + j * TILE);
+        ctx.drawImage((new symbol_types[L.goal[j][i]]()).sprite, off_x + X_GOAL + TILE * i, off_y + Y_GOAL + j * TILE);
       }
     }
 	}
 
   ctx.beginPath()
   for (let i = 0; i <= w; i++) {
-		ctx.moveTo(X_GOAL + TILE * i, Y_GOAL)
-		ctx.lineTo(X_GOAL + TILE * i, Y_GOAL + h * TILE)
+		ctx.moveTo(X_GOAL + TILE * i + off_x, Y_GOAL + off_y)
+		ctx.lineTo(X_GOAL + TILE * i + off_x, Y_GOAL + h * TILE + off_y)
 	}
 	for (let i = 0; i <= h; i++) {
-		ctx.moveTo(X_GOAL, Y_GOAL + TILE * i)
-		ctx.lineTo(X_GOAL + w * TILE, Y_GOAL + TILE * i)
+		ctx.moveTo(X_GOAL + off_x, Y_GOAL + TILE * i + off_y)
+		ctx.lineTo(X_GOAL + w * TILE + off_x, Y_GOAL + TILE * i + off_y)
 	}
 	ctx.stroke()
 }
@@ -687,6 +704,16 @@ function draw_victory_area() {
     let [x,y,w,h] = L.victory_rectangle
     ctx.fillRect(X_GRID + TILE * x, Y_GRID + TILE * y, TILE*w, TILE*h)
   }
+}
+
+function draw_button(button) {
+  let [x,y,w,h,f] = button
+  let pressed = isButtonDown('left') && (mouse.x >= x && mouse.x < x + w && mouse.y >= y && mouse.y < y + h)
+  if (pressed) {
+    ctx.fillStyle = "#5278A5"
+    ctx.fillRect(x,y,w,h);
+  }
+  ctx.strokeRect(x,y,w,h);
 }
 
 window.addEventListener("load", _e => {
@@ -728,6 +755,12 @@ function draw() {
 			L.symbols_used[held_tile] = false;
 			held_tile = null;
 		}
+  } else if (wasButtonReleased('left') && held_tile === null) {
+    buttons.forEach(([x,y,w,h,f]) => {
+      if (mouse.x >= x && mouse.x < x + w && mouse.y >= y && mouse.y < y + h) {
+        f();
+      }
+    })
   }
 
   // warning: messes up undo
@@ -742,6 +775,9 @@ function draw() {
   if (wasKeyPressed('n')) {
     L = levels[L.n - 1]
   }
+
+
+ ctx.drawImage(ui_img, 0, 0);
 
   // if (extra_draw_code.length > 0) extra_draw_code[extra_draw_code.length - 1]()
   extra_draw_code.forEach(f => f());
@@ -763,6 +799,9 @@ function draw() {
   drawgoalarea();
 
   drawheldtile();
+
+  buttons.forEach(draw_button)
+
   //something goes here
 
   // engine stuff
@@ -992,6 +1031,9 @@ for (k = 0; k < 19; k++) {
   images.push(cur_img)
 }
 
+let ui_img = new Image();
+ui_img.src = "ui.png";
+
 function inBounds(coords) {
   return coords.x >= 0 && coords.x < N_TILES && coords.y >= 0 && coords.y < N_TILES
 }
@@ -1015,18 +1057,35 @@ function makesymbolat(coords, symboltype) { //called when a symbol makes a symbo
 
 async function placesymbolat(coords, symboltype) { //called when the player places a symbol, should potentially remove it from bank too
   // undo: store how the world was
-  L.symbols_used[held_tile] = false; // hacky thing for undo
+  /*L.symbols_used[held_tile] = false; // hacky thing for undo
   L.grid_undos.push(grid2blob(L.grid))
-  L.actions_undos.push(grid2blob(L.actions))
+  L.actions_undos.push(actions2blob(L.actions))
   L.symbols_used_undos.push([...L.symbols_used])
-
-  L.symbols_used[held_tile] = true; // hacky thing for undo
+  L.undo_head += 1
+  L.symbols_used[held_tile] = true;*/ // hacky thing for undo
+  let used_tile = held_tile
+  // L.symbols_used[used_tile] = false; // hacky thing for undo
 
   s = new symboltype(coords);
   L.grid[coords.str()] = s;
   await s.placefunc();
   L.actions.push(s);
   doturn();
+
+  L.grid_undos = L.grid_undos.slice(0, L.undo_head + 1)
+  L.actions_undos = L.actions_undos.slice(0, L.undo_head + 1)
+  L.symbols_used_undos = L.symbols_used_undos.slice(0, L.undo_head + 1)
+
+  // L.symbols_used[used_tile] = true  // hacky thing for undo
+  // undo: store how the world is after the action
+  L.grid_undos.push(grid2blob(L.grid))
+  L.actions_undos.push(actions2blob(L.actions))
+  L.symbols_used_undos.push([...L.symbols_used])
+  L.undo_head += 1
+
+  // assertion: L.grid === L.grid_undos[L.undo_head]
+
+  L.victory_rectangle = check_won()
 }
 
 var insertbeforecurrentaction = null; //this is probably a bad idea but it works
@@ -1072,12 +1131,12 @@ async function doturn() {
   //pendingactions = []
   console.log("finished all actions")
 
-  L.victory_rectangle = check_won(L)
+  //L.victory_rectangle = check_won()
 }
 
-function check_won(level) {
-  let h = level.goal.length;
-  let w = level.goal[0].length;
+function check_won() {
+  let h = L.goal.length;
+  let w = L.goal[0].length;
 
   for (let x=0; x<N_TILES - w; x++) {
     for (let y=0; y<N_TILES - h; y++) {
@@ -1088,8 +1147,8 @@ function check_won(level) {
         for (let j=0; j<h; j++) {
           if (skip) continue
 
-          let real_tile = level.grid[new Coords(i+x,j+y).str()]?.constructor
-          let goal_tile_n = level.goal[j][i]
+          let real_tile = L.grid[new Coords(i+x,j+y).str()]?.constructor
+          let goal_tile_n = L.goal[j][i]
           if (goal_tile_n === -1) {
             if (real_tile !== undefined) skip = true
           } else {
@@ -1125,7 +1184,7 @@ function blob2grid(blob) {
 
 function actions2blob(actions) {
   return actions.map(action => {
-    return [action.coords.x, actions.coords.y]
+    return [action.coords.x, action.coords.y]
   })
 }
 
@@ -1136,12 +1195,41 @@ function blob2actions(blob, grid) {
 }
 
 function undo() {
+  if (L.undo_head === 0) return
+  /*
   L.grid = blob2grid(L.grid_undos.pop())
   L.actions = blob2actions(L.actions_undos.pop(), L.grid)
   L.symbols_used = L.symbols_used_undos.pop()
   L.victory_rectangle = check_won(L)
+  */
+  L.undo_head -= 1
+  L.grid = blob2grid(L.grid_undos[L.undo_head])
+  L.actions = blob2actions(L.actions_undos[L.undo_head], L.grid)
+  L.symbols_used = [...L.symbols_used_undos[L.undo_head]]
+  L.victory_rectangle = check_won(L)
 }
 
+function redo() {
+  if (L.undo_head + 1 < L.grid_undos.length) {
+    L.undo_head += 1
+    L.grid = blob2grid(L.grid_undos[L.undo_head])
+    L.actions = blob2actions(L.actions_undos[L.undo_head], L.grid)
+    L.symbols_used = [...L.symbols_used_undos[L.undo_head]]
+    L.victory_rectangle = check_won(L)
+  }
+}
+
+function prevLevel() {
+  if (L.n > 0) {
+    L = levels[L.n - 1]
+  }
+}
+
+function nextLevel() {
+  if (L.n + 1 < levels.length) {
+    L = levels[L.n + 1]
+  }
+}
 
 // engine stuff
 

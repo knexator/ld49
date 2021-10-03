@@ -314,55 +314,16 @@ class Blocker extends Symbol {
   }*/
 }
 
+/*
+// old behaviour
 class Preserver extends Symbol {
   sprite = images[9]
-  /*constructor(coords) {
-    super(coords, () => this.recordStuff(), () => this.recreateStuff(), () => { }, images[9]);
-  }*/
-	/*
-  constructor(coords) {
-    super(coords)
-    // TODO: this wont record hidden state of symbols!
-    this.recordedTypes = []
-    for (var k = 0; k < 8; k++) {
-      let thingy = L.grid[this.coords.add(threebythreeoffsets[k]).str()]
-      if (thingy !== undefined) {
-        this.recordedTypes.push(thingy.constructor)
-      } else {
-        this.recordedTypes.push(undefined)
-      }
-    }
-  }
-	*/
 	async actfunc() {
-		/*for (const offset of threebythreeoffsets) {
-			let offset_coor = this.coords.add(offset)
-			await kill_at(offset_coor)
-			//await sleep(20)
-      // L.grid[offset_coor.str()]?.getKilled()
-		}*/
-
-    /*for (let k=0; k<8; k++) {
-      let [_k, symbol] =
-    }*/
-
 		for (const pair of L.recordedSymbols) {
 			let offset_coor = this.coords.add(threebythreeoffsets[pair[0]])
-      //clone_tile()
 			if (inBounds(offset_coor)) {
-				// await kill_at(offset_coor);
-				// makesymbolat(offset_coor, pair[1])
         await clone_tile_from_type(pair[1], offset_coor)
 				await sleep(50)
-        /*let overlapping = L.grid[offset_coor.str()]
-        if (overlapping === undefined) {
-          makesymbolat(offset_coor, this.recordedTypes[k])
-        } else {
-          if (!DEBUG_MOVE_RESPECTFULLY) {
-            L.grid[offset_coor.str()].delfunc()
-            makesymbolat(offset_coor, this.recordedTypes[k])
-          }
-        }*/
 			}
 		}
 	}
@@ -378,7 +339,55 @@ class Preserver extends Symbol {
 		}
 	}
 }
+*/
 
+// "empty Preserver should behave like a bomb"
+class Preserver extends Symbol {
+  sprite = images[9]
+	async actfunc() {
+		for (var k = 0; k < 8; k++) {
+			let offset_coor = this.coords.add(threebythreeoffsets[k])
+			if (inBounds(offset_coor)) {
+        await clone_tile_from_type(L.recordedSymbols[k], offset_coor)
+				await sleep(50)
+			}
+		}
+	}
+
+	async placefunc() {
+		L.recordedSymbols = [];
+		for (var k = 0; k < 8; k++) {
+      let offset_coor = this.coords.add(threebythreeoffsets[k])
+      let asymbol = L.grid[offset_coor.str()]
+			L.recordedSymbols.push(asymbol?.constructor); // possibly undefined
+		}
+	}
+}
+
+/*
+// "add to the back of action queue, s9 not overwrite existing tiles that match the tile it wants to place"
+class Preserver extends Symbol {
+  sprite = images[9]
+	async actfunc() {
+		for (var k = 0; k < 8; k++) {
+			let offset_coor = this.coords.add(threebythreeoffsets[k])
+			if (inBounds(offset_coor)) {
+        await clone_tile_from_type(L.recordedSymbols[k], offset_coor, true, true)
+				await sleep(50)
+			}
+		}
+	}
+
+	async placefunc() {
+		L.recordedSymbols = [];
+		for (var k = 0; k < 8; k++) {
+      let offset_coor = this.coords.add(threebythreeoffsets[k])
+      let asymbol = L.grid[offset_coor.str()]
+			L.recordedSymbols.push(asymbol?.constructor); // possibly undefined
+		}
+	}
+}
+*/
 class OrthoCopier extends Symbol {
   sprite = images[10]
   /*constructor(coords) {
@@ -1027,8 +1036,14 @@ async function clone_tile(from_coords, to_coords) {
   }*/
 }
 
-async function clone_tile_from_type(tile_type, to_coords) {
+async function clone_tile_from_type(tile_type, to_coords, add_to_end=false, ignore_if_equal=false) {
   if (!inBounds(to_coords)) return true // nothing to be done
+
+  if (ignore_if_equal) {
+    let placed_symbol = L.grid[to_coords.str()]?.constructor
+    if (tile_type === undefined && placed_symbol === undefined) return true
+    if (tile_type === placed_symbol) return true
+  }
   await kill_at(to_coords)
   // Another option:
   //_quietDelete(...) etc
@@ -1039,8 +1054,11 @@ async function clone_tile_from_type(tile_type, to_coords) {
 
   let new_symbol = new tile_type(to_coords)
   L.grid[to_coords.str()] = new_symbol
-  insertbeforecurrentaction(new_symbol);
-
+  if (add_to_end) {
+    L.actions.push(new_symbol);
+  } else {
+    insertbeforecurrentaction(new_symbol);
+  }
   // extremely hacky, oops
   /*if (new_symbol.constructor.name === "Preserver") {
     new_symbol.recordedTypes = symbol.recordedTypes

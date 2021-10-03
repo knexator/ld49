@@ -39,7 +39,7 @@ class Nooper extends Symbol {
 }
 
 class Nooper2 extends Symbol {
-  sprite = images[14]
+  sprite = images[1]
   /*constructor(coords, sprite) {
     //super(coords, () => { }, () => { }, () => { }, images[0]);
     super(coords, images[0]);
@@ -47,7 +47,7 @@ class Nooper2 extends Symbol {
 }
 
 class Bomb extends Symbol {
-  sprite = images[1]
+  sprite = images[2]
   /*constructor(coords, sprite) {
     super(coords, () => { }, () => this.explode(), () => { }, images[1]);
   }*/
@@ -65,7 +65,7 @@ class Bomb extends Symbol {
 }
 
 class PusherRight extends Symbol {
-  sprite = images[2]
+  sprite = images[3]
   /*constructor(coords) {
     super(coords, () => { }, () => {
       this.pushColumn();
@@ -105,7 +105,7 @@ class PusherRight extends Symbol {
 }
 
 class PullerUp extends Symbol {
-  sprite = images[3]
+  sprite = images[4]
 
   async actfunc() {
     // more special cases, yay
@@ -136,7 +136,7 @@ class PullerUp extends Symbol {
 }
 
 class Rotator extends Symbol {
-  sprite = images[4]
+  sprite = images[5]
   /*constructor(coords) {
     super(coords, () => { }, () => this.rotateStuff(), () => { }, images[4]);
   }*/
@@ -149,6 +149,15 @@ class Rotator extends Symbol {
       rotatingPieces.push(L.grid[offset_coor.str()]) // possibly undefined, but no problem
     }
     let pending_kill = null
+    console.log("hoasdf")
+    extra_draw_code.push(() => {
+      console.log("asdfklñjasdflñ")
+      ctx.fillStyle = "red"
+      ctx.fillRect(
+        X_GRID + TILE * this.coords.x - TILE * 1.1,
+        Y_GRID + TILE * this.coords.y - TILE * 1.1,
+        TILE * 3.2, TILE * 3.2)
+    })
     for (var k = 0; k < 8; k++) {
       let offset_coor = this.coords.add(threebythreeoffsets[k])
       let piece = rotatingPieces[(k + 1) % 8]
@@ -178,12 +187,13 @@ class Rotator extends Symbol {
     if (pending_kill) {
       await kill_at
     }
-    await sleep(100)
+    await sleep(200)
+    extra_draw_code.pop()
   }
 }
 
 class RunAway extends Symbol {
-  sprite = images[5]
+  sprite = images[6]
   /*constructor(coords) {
     super(coords, () => { }, () => this.runAway(), () => { }, images[5]);
   }*/
@@ -246,7 +256,7 @@ class RunAway extends Symbol {
 }
 
 class TaxiCab extends Symbol {
-  sprite = images[6]
+  sprite = images[7]
   /*constructor(coords) {
     super(coords, () => { }, () => this.taxiCabStuff(), () => { }, images[6]);
   }*/
@@ -277,7 +287,7 @@ class TaxiCab extends Symbol {
 }
 
 class Faller extends Symbol {
-  sprite = images[7]
+  sprite = images[8]
 
   async actfunc() {
     // a bit of a special case, don't directly use move_to since that would fall off the border
@@ -290,7 +300,7 @@ class Faller extends Symbol {
 }
 
 class Blocker extends Symbol {
-  sprite = images[8]
+  sprite = images[9]
   /*constructor(coords) {
     super(coords, () => { }, () => this.extend(), () => { }, images[8]);
   }*/
@@ -317,7 +327,7 @@ class Blocker extends Symbol {
 /*
 // old behaviour
 class Preserver extends Symbol {
-  sprite = images[9]
+  sprite = images[10]
 	async actfunc() {
 		for (const pair of L.recordedSymbols) {
 			let offset_coor = this.coords.add(threebythreeoffsets[pair[0]])
@@ -343,7 +353,7 @@ class Preserver extends Symbol {
 
 // "empty Preserver should behave like a bomb"
 class Preserver extends Symbol {
-  sprite = images[9]
+  sprite = images[10]
 	async actfunc() {
 		for (var k = 0; k < 8; k++) {
 			let offset_coor = this.coords.add(threebythreeoffsets[k])
@@ -367,7 +377,7 @@ class Preserver extends Symbol {
 /*
 // "add to the back of action queue, s9 not overwrite existing tiles that match the tile it wants to place"
 class Preserver extends Symbol {
-  sprite = images[9]
+  sprite = images[10]
 	async actfunc() {
 		for (var k = 0; k < 8; k++) {
 			let offset_coor = this.coords.add(threebythreeoffsets[k])
@@ -389,7 +399,7 @@ class Preserver extends Symbol {
 }
 */
 class OrthoCopier extends Symbol {
-  sprite = images[10]
+  sprite = images[11]
   /*constructor(coords) {
     super(coords, () => { }, () => this.extend(), () => { }, );
   }*/
@@ -408,7 +418,7 @@ class OrthoCopier extends Symbol {
 }
 
 class Kamikaze extends Symbol {
-  sprite = images[11]
+  sprite = images[12]
   /*constructor(coords) {
     super(coords, () => { }, () => { }, () => this.kamikaze(), images[11]);
   }*/
@@ -428,7 +438,7 @@ class Kamikaze extends Symbol {
 }
 
 class LeftSpreader extends Symbol {
-	sprite = images[12]
+	sprite = images[13]
 
 	async actfunc() {
 		let offset_coor = this.coords.add(new Coords(-1,0));
@@ -443,7 +453,7 @@ class LeftSpreader extends Symbol {
 }
 
 class AboveBelow extends Symbol {
-  sprite = images[13]
+  sprite = images[14]
   /*constructor(coords) {
     super(coords, () => { }, () => this.aboveBelow(), () => { }, images[13]);
   }*/
@@ -633,6 +643,7 @@ let buttons = [
 
 function drawgrid() {
   //ctx.lineWidth = 3;
+  // ctx.strokeStyle = "#1e1e1e"
   ctx.beginPath()
   for (let i = 0; i <= N_TILES; i++) {
     ctx.moveTo(X_GRID, Y_GRID + TILE * i)
@@ -645,7 +656,7 @@ function drawgrid() {
 
 function drawgridelements() {
   for (const [_key, value] of Object.entries(L.grid)) {
-    ctx.drawImage(value.sprite, X_GRID + TILE * value.coords.x, Y_GRID + TILE * value.coords.y);
+    ctx.drawImage(value.sprite, X_GRID + TILE * value.coords.x, Y_GRID + TILE * value.coords.y, TILE, TILE);
   }
 }
 
@@ -685,7 +696,9 @@ function drawtableau() {
 function drawtableauelements() {
 	for (let i = 0; i < symbol_types.length; i++){
 		if(!L.symbols_used[i]){
-			ctx.drawImage((new symbol_types[i]()).sprite, X_TABLEAU + (i % TAB_COLS)*TILE, Y_TABLEAU + Math.floor(i/TAB_COLS)*TILE)
+			ctx.drawImage(
+        images[i], X_TABLEAU + (i % TAB_COLS)*TILE,
+        Y_TABLEAU + Math.floor(i/TAB_COLS)*TILE, TILE, TILE)
 		}
 	}
 
@@ -693,7 +706,8 @@ function drawtableauelements() {
 
 function drawheldtile() {
 	if( held_tile !== null) {
-		ctx.drawImage((new symbol_types[held_tile]()).sprite,mouse.x - TILE/2,mouse.y - TILE/2);
+		ctx.drawImage(images[held_tile], mouse.x - TILE/2,mouse.y - TILE/2, TILE, TILE);
+		// ctx.drawImage((new symbol_types[held_tile]()).sprite,mouse.x - TILE/2,mouse.y - TILE/2, TILE, TILE);
 	}
 }
 
@@ -709,7 +723,7 @@ function drawgoalarea() {
   for (let i = 0; i < w; i++){
     for (let j = 0; j<h; j++) {
       if (L.goal[j][i] !== -1) {
-        ctx.drawImage((new symbol_types[L.goal[j][i]]()).sprite, off_x + X_GOAL + TILE * i, off_y + Y_GOAL + j * TILE);
+        ctx.drawImage(images[L.goal[j][i]], off_x + X_GOAL + TILE * i, off_y + Y_GOAL + j * TILE, TILE, TILE);
       }
     }
 	}
@@ -741,7 +755,7 @@ function draw_button(button) {
     ctx.fillStyle = "#5278A5"
     ctx.fillRect(x,y,w,h);
   }
-  ctx.drawImage(spr, x, y)
+  ctx.drawImage(spr, x, y, w, h)
   ctx.strokeRect(x,y,w,h);
 }
 
@@ -923,6 +937,7 @@ async function kill_at(coords, explicit_kill=true) {
     })
   }
 
+
   let symbol = L.grid[coords.str()]
   if (symbol === undefined) {
     // this will be used for graphics
@@ -1085,9 +1100,9 @@ function checkforblocker(symbol) {
 
 let images = []
 
-for (k = 0; k < 19; k++) {
+for (k = 1; k < 19; k++) {
   let cur_img = new Image();
-  cur_img.src = "s" + k.toString() + ".png";
+  cur_img.src = "icons/s" + k.toString() + ".png";
   images.push(cur_img)
 }
 

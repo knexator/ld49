@@ -350,8 +350,8 @@ class Preserver extends Symbol {
 			let offset_coor = this.coords.add(threebythreeoffsets[pair[0]])
       //clone_tile()
 			if (inBounds(offset_coor)) {
-				/*await kill_at(offset_coor);
-				makesymbolat(offset_coor, pair[1])*/
+				// await kill_at(offset_coor);
+				// makesymbolat(offset_coor, pair[1])
         await clone_tile_from_type(pair[1], offset_coor)
 				await sleep(50)
         /*let overlapping = L.grid[offset_coor.str()]
@@ -1149,7 +1149,7 @@ async function doturn() {
   let i = 0;
   doing_stuff = true
   insertbeforecurrentaction = (symbol) => {
-	  L.actions.splice(i + 1, 0, symbol);
+	  L.actions.splice(i, 0, symbol);
 	  i += 1
   }
   removefromactionsandmaybemovebackwards = (symbol) => {

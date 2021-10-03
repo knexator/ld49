@@ -988,6 +988,14 @@ function makesymbolat(coords, symboltype) { //called when a symbol makes a symbo
 }
 
 async function placesymbolat(coords, symboltype) { //called when the player places a symbol, should potentially remove it from bank too
+  // undo: store how the world was
+  L.symbols_used[held_tile] = false; // hacky thing for undo
+  L.grid_undos.push(grid2blob(L.grid))
+  L.actions_undos.push(grid2blob(L.actions))
+  L.symbols_used_undos.push([...L.symbols_used])
+
+  L.symbols_used[held_tile] = true; // hacky thing for undo
+
   s = new symboltype(coords);
   L.grid[coords.str()] = s;
   await s.placefunc();
@@ -1009,10 +1017,6 @@ async function doturn() {
   })*/
   /*action_queue_pos = 0
   do_cur_action()*/
-
-  L.grid_undos.push(grid2blob(L.grid))
-  L.actions_undos.push(grid2blob(L.actions))
-  L.symbols_used_undos.push([...L.symbols_used])
 
   let i = 0;
   doing_stuff = true

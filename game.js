@@ -724,6 +724,8 @@ window.addEventListener("load", _e => {
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+  SKIP_ANIMS = isButtonDown("left") // so hacky it hurts
+
   if(DEBUG_ALLOW_KEYPLACEMENT) {
     for (let k = 0; k < 14; k++) {
   		if (wasKeyPressed(debug_keys[k])) {
@@ -1298,7 +1300,11 @@ function wasKeyReleased(k) {
   return (!keyboard[k] || false) && (keyboard_prev[k] || false);
 }
 
-DEBUG_TIME_MULTI = 1
+DEBUG_TIME_MULTI = 1 // useful for slow mo analysis
 function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, DEBUG_TIME_MULTI * ms));
+  if (SKIP_ANIMS) {
+    return new Promise(resolve => setTimeout(resolve, 10));
+  } else {
+    return new Promise(resolve => setTimeout(resolve, DEBUG_TIME_MULTI * ms));
+  }
 }

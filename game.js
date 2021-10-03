@@ -418,11 +418,11 @@ class Kamikaze extends Symbol {
       let offset_coor = this.coords.add(offsets[k])
       let thingy = L.grid[offset_coor.str()]
       if (!thingy) continue
-      //if (thingy.constructor.name == "Kamikaze") {
+      if (thingy.constructor.name == "Kamikaze") {
         await kill_at(offset_coor)
         await sleep(50)
         // thingy.delfunc() // somehow it doesn't enter in an endless loop, lol
-      //}
+      }
     }
   }
 }

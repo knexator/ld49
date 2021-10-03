@@ -9,244 +9,6 @@ Preservers wont properly preserve other Preservers
 rotators wont properly tirgger the destruction of border stuff
 */
 
-let debug_keys = '0123456789abcdefghijklmnopqrstuvwxyz'
-
-let TILE = 50
-let ACTION_TIME = 100
-let N_TILES = 10
-let DEBUG_PUSH_OFF_BORDER = false
-let DEBUG_MOVE_RESPECTFULLY = false
-let DEBUG_WALK_OUTOFBONDS = false
-
-let action_queue_pos = null
-
-let extra_draw_code = []
-
-function drawgrid() {
-  //ctx.lineWidth = 3;
-  for (let i = 0; i < N_TILES; i++) {
-    ctx.moveTo(0, TILE * (i + 1))
-    ctx.lineTo(500, TILE * (i + 1))
-    ctx.moveTo(TILE * (i + 1), 0)
-    ctx.lineTo(TILE * (i + 1), 500)
-  }
-  ctx.stroke()
-}
-
-function drawgridelements() {
-  for (const [_key, value] of Object.entries(grid)) {
-    ctx.drawImage(value.sprite, 50 * value.coords.x, 50 * value.coords.y);
-  }
-}
-
-function drawactionqueue() {
-  ctx.beginPath()
-  ctx.moveTo(0, canvas.height - 50);
-  ctx.lineTo(50 * actions.length, canvas.height - 50);
-  for (let i = 0; i < actions.length; i++) {
-    ctx.drawImage(actions[i].sprite, 50 * i, canvas.height - 50);
-    ctx.moveTo(50 * (i + 1), canvas.height - 50);
-    ctx.lineTo(50 * (i + 1), canvas.height);
-  }
-  ctx.stroke();
-}
-
-window.addEventListener("load", _e => {
-  // window.dispatchEvent(new Event('resize'));
-  window.requestAnimationFrame(draw);
-});
-
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-  for (let k = 0; k < 14; k++) {
-    if (wasKeyPressed(debug_keys[k])) {
-      let coords = new Coords(Math.floor(mouse.x / TILE), Math.floor(mouse.y / TILE))
-      placesymbolat(coords, symbol_types[k])
-    }
-  }
-  if (wasKeyPressed(' ')) doturn()
-
-  if (extra_draw_code.length > 0) extra_draw_code[extra_draw_code.length - 1]()
-
-  drawgridelements();
-
-  drawgrid();
-
-  drawactionqueue();
-  //something goes here
-
-  // engine stuff
-  mouse_prev = Object.assign({}, mouse);
-  mouse.wheel = 0;
-  keyboard_prev = Object.assign({}, keyboard);
-  window.requestAnimationFrame(draw);
-}
-
-class Coords {
-  constructor(x, y) {
-    this.x = x;
-    this.y = y;
-  }
-
-  add(c2) {
-    return new Coords(this.x + c2.x, this.y + c2.y);
-  }
-
-  scalar(m) {
-    return new Coords(this.x * m, this.y * m);
-  }
-
-  str() {
-    return this.x.toString() + "," + this.y.toString();
-  }
-
-  clone() {
-    return new Coords(this.x, this.y)
-  }
-}
-
-var offsets = [new Coords(0, 1), new Coords(1, 0), new Coords(0, -1), new Coords(-1, 0)];
-
-var threebythreeoffsets = [new Coords(-1, -1), new Coords(0, -1), new Coords(1, -1),
-new Coords(1, 0),
-new Coords(1, 1), new Coords(0, 1), new Coords(-1, 1),
-new Coords(-1, 0)]; //rotational order
-var grid = {};
-
-var actions = [];
-
-var pendingactions = [];
-
-function _quietDelete(symbol) {
-  if (symbol === undefined) return;
-  symbol.deleted = true // idk if this will be used elsewhere
-  delete grid[symbol.coords.str()];
-  actions = actions.filter(x => x !== symbol)
-  pendingactions = pendingactions.filter(x => x !== symbol)
-}
-
-// DESIGN DECISIONS
-// if we use these helper functions consistently, we can quickly adjust the game's behaviour
-// (it will also help with graphics)
-// These should be understood as commands; they will return true if the action is succesful
-
-// Called by Bomb, TaxiCab, ???; explicitly kill the symbol
-async function kill_at(coords) {
-  let symbol = grid[coords.str()]
-  if (symbol === undefined) {
-    // this will be used for graphics
-    return true;
-  } else {
-    // kill triggers the del action
-    await symbol.delfunc();
-
-    _quietDelete(symbol);
-    return true;
-  }
-}
-
-async function move_to(from_coords, to_coords) {
-  console.log("called move_to")
-  extra_draw_code.push(() => {
-    ctx.fillStyle = "red"
-    ctx.fillRect(from_coords.x * TILE, from_coords.y * TILE, TILE, TILE)
-    ctx.fillRect(to_coords.x * TILE, to_coords.y * TILE, TILE, TILE)
-  })
-  if (!inBounds(from_coords)) return true
-  let symbol = grid[from_coords.str()]
-  if (symbol === undefined) {
-    // this will be used for graphics
-    await sleep(200)
-    extra_draw_code.pop()
-    return true;
-  }
-  if (!inBounds(to_coords)) {
-    _quietDelete(symbol);
-    return true
-
-    // Another option:
-    //return false
-
-    // Another option:
-    //symbol.delfunc() // tigger special effects when falling out of the border
-    //return true
-  }
-  let occupying_symbol = grid[to_coords.str()]
-  if (occupying_symbol) {
-    await kill_at(to_coords)
-
-    // Another option:
-    //return false // don't step on other symbols
-
-    // Another option:
-    //_quietDelete(occupying_symbol) // delete without triggering special effects
-  }
-
-  delete grid[from_coords.str()];
-  symbol.coords = to_coords
-  grid[to_coords.str()] = symbol
-  await sleep(100)
-  extra_draw_code.pop()
-
-  return true
-}
-
-// activate the stuff
-async function activate_at(coords) {
-  extra_draw_code.push(() => {
-    ctx.fillStyle = "red"
-    ctx.fillRect(coords.x * TILE - 20, coords.y * TILE - 20, TILE + 40, TILE + 40)
-  })
-  let symbol = grid[coords.str()]
-  if (symbol === undefined) {
-    // this will be used for graphics
-    return true;
-  }
-  if (checkforblocker(symbol)) return false
-  await symbol.actfunc()
-  extra_draw_code.pop()
-  return true
-}
-
-async function clone_tile(from_coords, to_coords) {
-  if (!inBounds(to_coords)) return true // nothing to be done
-  await kill_at(to_coords)
-  // Another option:
-  //_quietDelete(...) etc
-
-  let symbol = grid[from_coords.str()]
-  if (symbol === undefined) {
-    return true
-  }
-
-  let new_symbol = new symbol.constructor(to_coords)
-  grid[to_coords.str()] = new_symbol
-  pendingactions.push(new_symbol);
-
-  // extremely hacky, oops
-  if (new_symbol.constructor.name === "Preserver") {
-    new_symbol.recordedTypes = symbol.recordedTypes
-  }
-}
-
-
-function taxiCabDist(coor1, coor2) {
-  return Math.abs(coor1.x - coor2.x) + Math.abs(coor1.y - coor2.y)
-}
-
-function checkforblocker(symbol) {
-  if (symbol.constructor.name == "Blocker") return false // easier to handle the special case here
-  for (const offset of offsets) {
-    let target = grid[symbol.coords.add(offset).str()];
-    if (typeof target !== 'undefined') {
-      if (target.constructor.name == "Blocker") {
-        return true;
-      }
-    }
-  }
-  return false;
-}
 
 class Symbol {
   sprite = null // static property, doesn't need to be in constructor
@@ -255,22 +17,30 @@ class Symbol {
     this.deleted = false
   }
 
-  /*async placefunc() {
+  async placefunc() {
 
-  }*/
+  }
 
   async actfunc() {
     await sleep(20)
   }
 
   async delfunc() {
-
+	_quietDelete(this);
   }
 
 }
 
 class Nooper extends Symbol {
   sprite = images[0]
+  /*constructor(coords, sprite) {
+    //super(coords, () => { }, () => { }, () => { }, images[0]);
+    super(coords, images[0]);
+  }*/
+}
+
+class Nooper2 extends Symbol {
+  sprite = images[14]
   /*constructor(coords, sprite) {
     //super(coords, () => { }, () => { }, () => { }, images[0]);
     super(coords, images[0]);
@@ -516,13 +286,12 @@ class Blocker extends Symbol {
     super(coords, () => { }, () => this.extend(), () => { }, images[8]);
   }*/
   async actfunc() {
-    for (var k = 0; k < 8; k++) {
-      let offset_coor = this.coords.add(threebythreeoffsets[k])
-      /*if (inBounds(offset_coor) && !occupied(offset_coor)) {
-        makesymbolat(offset_coor, Blocker)
-      }*/
-      await clone_tile(this.coords, offset_coor)
-      await sleep(10)
+    for (var k = 0; k < 4; k++) {
+      let offset_coor = this.coords.add(offsets[k])
+      if (inBounds(offset_coor) && !occupied(offset_coor)) {
+        await clone_tile(this.coords, offset_coor) //changed this, shouldn't be cloning onto existing stuff
+		await sleep(10)
+      }
     }
   }
 
@@ -536,12 +305,14 @@ class Blocker extends Symbol {
   }*/
 }
 
+var recordedSymbols;
+
 class Preserver extends Symbol {
   sprite = images[9]
   /*constructor(coords) {
     super(coords, () => this.recordStuff(), () => this.recreateStuff(), () => { }, images[9]);
   }*/
-
+	/*
   constructor(coords) {
     super(coords)
     // TODO: this wont record hidden state of symbols!
@@ -555,15 +326,23 @@ class Preserver extends Symbol {
       }
     }
   }
-
-  async actfunc() {
-    for (var k = 0; k < 8; k++) {
-      let offset_coor = this.coords.add(threebythreeoffsets[k])
+	*/
+	async actfunc() {
+		
+		for (const offset of threebythreeoffsets) {
+			let offset_coor = this.coords.add(offset)
+			await kill_at(offset_coor)
+			//await sleep(20)
+      // grid[offset_coor.str()]?.getKilled()
+		}
+  
+		for (const pair of recordedSymbols) {
+			let offset_coor = this.coords.add(threebythreeoffsets[pair[0]])
       //clone_tile()
-      if (inBounds(offset_coor)) {
-        await kill_at(offset_coor);
-        makesymbolat(offset_coor, this.recordedTypes[k])
-        await sleep(30)
+			if (inBounds(offset_coor)) {
+				await kill_at(offset_coor);
+				makesymbolat(offset_coor, pair[1])
+				await sleep(30)
         /*let overlapping = grid[offset_coor.str()]
         if (overlapping === undefined) {
           makesymbolat(offset_coor, this.recordedTypes[k])
@@ -573,9 +352,20 @@ class Preserver extends Symbol {
             makesymbolat(offset_coor, this.recordedTypes[k])
           }
         }*/
-      }
-    }
-  }
+			}
+		}
+	}
+  
+	async placefunc() {
+		recordedSymbols = [];
+		for (const asymbol of actions) { //so order among copied symbols stays the same
+			for (var k = 0; k < 8; k++) {
+				if (this.coords.add(threebythreeoffsets[k]).equals(asymbol.coords)) {
+					recordedSymbols.push([k,asymbol.constructor]);
+				}
+			}
+		}
+	}
 }
 
 class OrthoCopier extends Symbol {
@@ -587,9 +377,11 @@ class OrthoCopier extends Symbol {
     for (var k = 0; k < 4; k++) {
       let offset_coor = this.coords.add(offsets[k])
       if (inBounds(offset_coor) && occupied(offset_coor)) {
-        // makesymbolat(offset_coor, OrthoCopier)
-        await clone_tile(this.coords, offset_coor)
-        await sleep(20)
+		  if (grid[offset_coor.str()].constructor.name !== "OrthoCopier"){
+			// makesymbolat(offset_coor, OrthoCopier)
+			await clone_tile(this.coords, offset_coor)
+			await sleep(20)
+		  }
       }
     }
   }
@@ -601,6 +393,7 @@ class Kamikaze extends Symbol {
     super(coords, () => { }, () => { }, () => this.kamikaze(), images[11]);
   }*/
   async delfunc() {
+	super.delfunc();
     for (var k = 0; k < 4; k++) {
       let offset_coor = this.coords.add(offsets[k])
       let thingy = grid[offset_coor.str()]
@@ -612,6 +405,21 @@ class Kamikaze extends Symbol {
       }
     }
   }
+}
+
+class LeftSpreader extends Symbol {
+	sprite = images[12]
+
+	async actfunc() {
+		let offset_coor = this.coords.add(new Coords(-1,0));
+		if (inBounds(offset_coor) && !occupied(offset_coor)) {
+			await clone_tile(this.coords, offset_coor)
+			await sleep(20)
+			await kill_at(this.coords.add(new Coords(-1,-1)))
+			await kill_at(this.coords.add(new Coords(-1,1)))
+		}
+	}
+
 }
 
 class AboveBelow extends Symbol {
@@ -636,10 +444,12 @@ class AboveBelow extends Symbol {
           if (action !== thingy) return action
           return grid[coor]
         })
+		/*
         pendingactions = pendingactions.map(action => {
           if (action !== thingy) return action
           return grid[coor]
         })
+		*/
       } else if (thingy.constructor.name == obj_below_type.name) {
         grid[coor] = new obj_above_type(thingy.coords);
         // keep action order
@@ -647,19 +457,372 @@ class AboveBelow extends Symbol {
           if (action !== thingy) return action
           return grid[coor]
         })
+		/*
         pendingactions = pendingactions.map(action => {
           if (action !== thingy) return action
           return grid[coor]
         })
+		*/
       }
     })
     await sleep(100)
   }
 }
 
+let debug_keys = '0123456789abcdefghijklmnopqrstuvwxyz'
+
+let symbol_types = [
+  Nooper, // 0
+  Nooper2,
+  Bomb,
+  PusherRight,
+  PullerUp,
+  Rotator,	// 5
+  RunAway, 
+  TaxiCab,
+  Faller,
+  Blocker,
+  Preserver,	// 10 (a)
+  OrthoCopier, 
+  Kamikaze,
+  LeftSpreader,
+  AboveBelow,
+/*Nooper,
+  Nooper, // 15
+  Nooper,*/ 
+]
+
+let symbols_used = Array(symbol_types.length).fill(false)
+
+
+let TILE = 50
+let ACTION_TIME = 100
+let N_TILES = 10
+
+let X_GRID = 30 //these values should be able to be messed with and not cause problems
+let Y_GRID = 20
+let X_TABLEAU = 600
+let Y_TABLEAU = 20
+let TAB_COLS = 3
+let TAB_ROWS = Math.ceil(symbol_types.length/TAB_COLS)
+
+let DEBUG_PUSH_OFF_BORDER = false
+let DEBUG_MOVE_RESPECTFULLY = false
+let DEBUG_WALK_OUTOFBONDS = false
+let DEBUG_HIDE_NUMBERS = false
+let DEBUG_ALLOW_KEYPLACEMENT = true
+let DEBUG_ALLOW_PASS_WITH_SPACE = true
+
+//let action_queue_pos = null
+
+let held_tile = null;
+
+let extra_draw_code = []
+
+function drawgrid() {
+  //ctx.lineWidth = 3;
+  for (let i = 0; i <= N_TILES; i++) {
+    ctx.moveTo(X_GRID, Y_GRID + TILE * i)
+    ctx.lineTo(X_GRID + N_TILES * TILE, Y_GRID + TILE * i)
+    ctx.moveTo(X_GRID + TILE * i, Y_GRID)
+    ctx.lineTo(X_GRID + TILE * i, Y_GRID + N_TILES * TILE)
+  }
+  ctx.stroke()
+}
+
+function drawgridelements() {
+  for (const [_key, value] of Object.entries(grid)) {
+    ctx.drawImage(value.sprite, X_GRID + TILE * value.coords.x, Y_GRID + TILE * value.coords.y);
+  }
+}
+
+function drawactionqueue() { //don't think we need this anymore
+  ctx.beginPath()
+  ctx.moveTo(0, canvas.height - TILE);
+  ctx.lineTo(TILE * actions.length, canvas.height - TILE);
+  for (let i = 0; i < actions.length; i++) {
+    ctx.drawImage(actions[i].sprite, TILE * i, canvas.height - TILE);
+    ctx.moveTo(TILE * (i + 1), canvas.height - TILE);
+    ctx.lineTo(TILE * (i + 1), canvas.height);
+  }
+  ctx.stroke();
+}
+
+function drawactionnumbers() {
+	if (DEBUG_HIDE_NUMBERS) { return }
+	ctx.font = '20px sans-serrif'	
+	for (let i = 0; i < actions.length; i++) {
+		ctx.strokeText(i.toString().padStart(2,'0'),X_GRID + TILE * actions[i].coords.x,Y_GRID + TILE * actions[i].coords.y + 20) //TODO make this not awful (20)
+	}
+}
+
+function drawtableau() {
+	for (let i = 0; i <= TAB_COLS; i++) {
+		ctx.moveTo(X_TABLEAU + TILE * i, Y_TABLEAU)
+		ctx.lineTo(X_TABLEAU + TILE * i, Y_TABLEAU + TAB_ROWS * TILE)
+	}
+	for (let i = 0; i <= TAB_ROWS; i++) {
+		ctx.moveTo(X_TABLEAU, Y_TABLEAU + TILE * i)
+		ctx.lineTo(X_TABLEAU + TAB_COLS * TILE, Y_TABLEAU + TILE * i)
+	}
+	ctx.stroke()
+}
+
+function drawtableauelements() {
+	for (let i = 0; i < symbol_types.length; i++){
+		if(!symbols_used[i]){
+			ctx.drawImage((new symbol_types[i]()).sprite, X_TABLEAU + (i % TAB_COLS)*TILE, Y_TABLEAU + Math.floor(i/TAB_COLS)*TILE)
+		}
+	}
+	
+}
+
+function drawheldtile() {
+	if( held_tile !== null) {
+		ctx.drawImage((new symbol_types[held_tile]()).sprite,mouse.x - TILE/2,mouse.y - TILE/2);
+	}
+}
+
+
+window.addEventListener("load", _e => {
+  // window.dispatchEvent(new Event('resize'));
+  window.requestAnimationFrame(draw);
+});
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  for (let k = 0; k < 14; k++) {
+	if(DEBUG_ALLOW_KEYPLACEMENT){
+		if (wasKeyPressed(debug_keys[k])) {
+			let coords = new Coords(Math.floor((mouse.x - X_GRID) / TILE), Math.floor((mouse.y - Y_GRID) / TILE))
+			if(inBounds(coords) && !doing_stuff && !occupied(coords)){ //maybe if doing stuff, anim should be hurried somehow (even if occupied)?
+				placesymbolat(coords, symbol_types[k])
+			}
+		}
+	}
+	if(wasButtonPressed('left') && held_tile == null){ //held_tile should always be null, just hedging
+		let coords = new Coords(Math.floor((mouse.x - X_TABLEAU) / TILE), Math.floor((mouse.y - Y_TABLEAU) / TILE))
+		if( coords.x >= 0 && coords.x < TAB_COLS && coords.y >= 0 && coords.y < TAB_ROWS) {
+			let index = coords.x + TAB_COLS * coords.y;
+			if ( !symbols_used[index] ) {
+				symbols_used[index] = true;
+				held_tile = index;
+			}
+		}
+	}
+	
+	if(wasButtonReleased('left') && held_tile !== null){
+		let coords = new Coords(Math.floor((mouse.x - X_GRID) / TILE), Math.floor((mouse.y - Y_GRID) / TILE))
+		if(inBounds(coords) && !doing_stuff && !occupied(coords)){ //maybe if doing stuff, anim should be hurried somehow (even if occupied maybe)?
+			placesymbolat(coords, symbol_types[held_tile]);
+			held_tile = null;
+		}
+		else {
+			symbols_used[held_tile] = false;
+			held_tile = null;
+		}
+	}
+  }
+  if (wasKeyPressed(' ') && DEBUG_ALLOW_PASS_WITH_SPACE) doturn()
+
+  if (extra_draw_code.length > 0) extra_draw_code[extra_draw_code.length - 1]()
+
+  drawgridelements();
+
+  drawgrid();
+
+  //drawactionqueue();
+  
+  drawactionnumbers();
+  
+  drawtableauelements();
+  
+  drawtableau();
+  
+  drawheldtile();
+  //something goes here
+
+  // engine stuff
+  mouse_prev = Object.assign({}, mouse);
+  mouse.wheel = 0;
+  keyboard_prev = Object.assign({}, keyboard);
+  window.requestAnimationFrame(draw);
+}
+
+class Coords {
+  constructor(x, y) {
+    this.x = x;
+    this.y = y;
+  }
+
+  add(c2) {
+    return new Coords(this.x + c2.x, this.y + c2.y);
+  }
+
+  scalar(m) {
+    return new Coords(this.x * m, this.y * m);
+  }
+
+  str() {
+    return this.x.toString() + "," + this.y.toString();
+  }
+
+  clone() {
+    return new Coords(this.x, this.y)
+  }
+  
+  equals(c2) {
+	  return ((this.x == c2.x) && (this.y == c2.y));
+  }
+}
+
+var offsets = [new Coords(0, 1), new Coords(1, 0), new Coords(0, -1), new Coords(-1, 0)];
+
+var threebythreeoffsets = [new Coords(-1, -1), new Coords(0, -1), new Coords(1, -1),
+new Coords(1, 0),
+new Coords(1, 1), new Coords(0, 1), new Coords(-1, 1),
+new Coords(-1, 0)]; //rotational order
+var grid = {};
+
+var actions = [];
+
+//var pendingactions = [];
+
+function _quietDelete(symbol) {
+  if (symbol === undefined) return;
+  symbol.deleted = true // idk if this will be used elsewhere
+  delete grid[symbol.coords.str()];
+  //actions = actions.filter(x => x !== symbol) //replaced by below function call
+  removefromactionsandmaybemovebackwards(symbol);
+  //pendingactions = pendingactions.filter(x => x !== symbol)
+}
+
+// DESIGN DECISIONS
+// if we use these helper functions consistently, we can quickly adjust the game's behaviour
+// (it will also help with graphics)
+// These should be understood as commands; they will return true if the action is succesful
+
+// Called by Bomb, TaxiCab, ???; explicitly kill the symbol
+async function kill_at(coords) {
+  let symbol = grid[coords.str()]
+  if (symbol === undefined) {
+    // this will be used for graphics
+    return true;
+  } else {
+    // kill triggers the del action
+    await symbol.delfunc();
+
+    //_quietDelete(symbol); //delfuncs must do this themself (but may do it at any point in their execution)
+    return true;
+  }
+}
+
+async function move_to(from_coords, to_coords) {
+  console.log("called move_to")
+  extra_draw_code.push(() => {
+    ctx.fillStyle = "red"
+    ctx.fillRect(from_coords.x * TILE, from_coords.y * TILE, TILE, TILE)
+    ctx.fillRect(to_coords.x * TILE, to_coords.y * TILE, TILE, TILE)
+  })
+  if (!inBounds(from_coords)) return true
+  let symbol = grid[from_coords.str()]
+  if (symbol === undefined) {
+    // this will be used for graphics
+    await sleep(200)
+    extra_draw_code.pop()
+    return true;
+  }
+  if (!inBounds(to_coords)) {
+    _quietDelete(symbol);
+    return true
+
+    // Another option:
+    //return false
+
+    // Another option:
+    //symbol.delfunc() // tigger special effects when falling out of the border
+    //return true
+  }
+  let occupying_symbol = grid[to_coords.str()]
+  if (occupying_symbol) {
+    await kill_at(to_coords)
+
+    // Another option:
+    //return false // don't step on other symbols
+
+    // Another option:
+    //_quietDelete(occupying_symbol) // delete without triggering special effects
+  }
+
+  delete grid[from_coords.str()];
+  symbol.coords = to_coords
+  grid[to_coords.str()] = symbol
+  await sleep(100)
+  extra_draw_code.pop()
+
+  return true
+}
+
+// activate the stuff
+async function activate_at(coords) {
+  extra_draw_code.push(() => {
+    ctx.fillStyle = "red"
+    ctx.fillRect(coords.x * TILE - 20, coords.y * TILE - 20, TILE + 40, TILE + 40)
+  })
+  let symbol = grid[coords.str()]
+  if (symbol === undefined) {
+    // this will be used for graphics
+    return true;
+  }
+  if (checkforblocker(symbol)) return false
+  await symbol.actfunc()
+  extra_draw_code.pop()
+  return true
+}
+
+async function clone_tile(from_coords, to_coords) {
+  if (!inBounds(to_coords)) return true // nothing to be done
+  await kill_at(to_coords)
+  // Another option:
+  //_quietDelete(...) etc
+
+  let symbol = grid[from_coords.str()]
+  if (symbol === undefined) {
+    return true
+  }
+
+  let new_symbol = new symbol.constructor(to_coords)
+  grid[to_coords.str()] = new_symbol
+  insertbeforecurrentaction(new_symbol);
+
+  // extremely hacky, oops
+  if (new_symbol.constructor.name === "Preserver") {
+    new_symbol.recordedTypes = symbol.recordedTypes
+  }
+}
+
+
+function taxiCabDist(coor1, coor2) {
+  return Math.abs(coor1.x - coor2.x) + Math.abs(coor1.y - coor2.y)
+}
+
+function checkforblocker(symbol) {
+  if (symbol.constructor.name == "Blocker") return false // easier to handle the special case here
+  for (const offset of offsets) {
+    let target = grid[symbol.coords.add(offset).str()];
+    if (typeof target !== 'undefined') {
+      if (target.constructor.name == "Blocker") {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 let images = []
 
-for (k = 0; k < 14; k++) {
+for (k = 0; k < 15; k++) {
   let cur_img = new Image();
   cur_img.src = "s" + k.toString() + ".png";
   images.push(cur_img)
@@ -681,18 +844,22 @@ function makesymbolat(coords, symboltype) { //called when a symbol makes a symbo
   } else {
     s = new symboltype(coords);
     grid[coords.str()] = s;
-    pendingactions.push(s);
+    insertbeforecurrentaction(s); 
     return s;
   }
 }
 
-function placesymbolat(coords, symboltype) { //called when the player places a symbol, should potentially remove it from bank too
+async function placesymbolat(coords, symboltype) { //called when the player places a symbol, should potentially remove it from bank too
   s = new symboltype(coords);
   grid[coords.str()] = s;
-  // s.placefunc();
+  await s.placefunc();
   actions.push(s);
   doturn();
 }
+
+var insertbeforecurrentaction = null; //this is probably a bad idea but it works
+
+var removefromactionsandmaybemovebackwards = null; //this is needed even if insertion behavior is reverted, since otherwise deleting something from actions that you've already acted will make you skip some other action 
 
 let doing_stuff = false
 async function doturn() {
@@ -706,37 +873,33 @@ async function doturn() {
   do_cur_action()*/
   let i = 0;
   doing_stuff = true
+  insertbeforecurrentaction = (symbol) => {
+	  actions.splice(i, 0, symbol);
+	  i += 1
+  }
+  removefromactionsandmaybemovebackwards = (symbol) => {
+	  if( actions.findIndex(x => x === symbol) <= i){
+		  i -= 1;
+	  }
+	  actions = actions.filter(x => x !== symbol)
+  }
   while (i < actions.length) {
     // await actions[i].actfunc()
     await activate_at(actions[i].coords)
     // await sleep(100) // TODO: this should be in the things actfuncs, not here
     i += 1
+	
   }
+  insertbeforecurrentaction = null; // want to be warned if this is called when it shouldn't be
+  removefromactionsandmaybemovebackwards = null; // as above 
+  
+  
   doing_stuff = false
-  actions = actions.concat(pendingactions)
-  pendingactions = []
+  //actions = actions.concat(pendingactions)
+  //pendingactions = []
   console.log("finished all actions")
 }
 
-let symbol_types = [
-  Nooper, // 0
-  Bomb,
-  PusherRight,
-  PullerUp,
-  Rotator,
-  RunAway, // 5
-  TaxiCab,
-  Faller,
-  Blocker,
-  Preserver,
-  OrthoCopier, // 10
-  Kamikaze,
-  Nooper,
-  AboveBelow,
-  Nooper,
-  Nooper, // 15
-  Nooper,
-]
 
 
 

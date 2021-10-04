@@ -300,6 +300,12 @@ class Faller extends Symbol {
     if (inBounds(new_coors) && !occupied(new_coors)) {
       await move_to(this.coords, new_coors)
       // await sleep(100)
+    } else {
+      extra_draw_code.push(() => {
+        if (inBounds(this.coords)) { drawactedtile(this.coords) }
+      })
+      await sleep(50)
+      extra_draw_code.pop()
     }
   }
 }
@@ -1162,7 +1168,7 @@ function drawactedtile(coords) {
 async function kill_at(coords, explicit_kill=true) {
   if (explicit_kill) {
     extra_draw_code.push(() => {
-      ctx.fillStyle = "red"
+      // ctx.fillStyle = "red"
       if (inBounds(coords)) { drawactedtile(coords) }
     })
   }
@@ -1187,7 +1193,7 @@ async function kill_at(coords, explicit_kill=true) {
 async function move_to(from_coords, to_coords) {
   // console.log("called move_to")
   extra_draw_code.push(() => {
-    ctx.fillStyle = "red"
+    // ctx.fillStyle = "red"
     if (inBounds(from_coords)) { drawactedtile(from_coords) }
     if (inBounds(to_coords)) { drawactedtile(to_coords) }
   })

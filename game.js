@@ -823,12 +823,33 @@ function drawactionqueue() { //don't think we need this anymore
 }
 */
 
+let TEXT_X = 6
+let TEXT_Y = 3
+let TEXT_SX = 26
+let TEXT_SY = 22
 function drawactionnumbers() {
 	if (DEBUG_HIDE_NUMBERS) { return }
-	ctx.font = 'bold 25px Comic Sans MS' //please for the love of god find a better option
-	ctx.fillStyle = "#c22b71"
+
+  ctx.textBaseline = "top"
+  ctx.textAlign = "left"
+	ctx.font = 'bold ' + Math.floor(TILE / 3).toString() + 'px Times New Roman'
+
 	for (let i = 0; i < L.actions.length; i++) {
-		ctx.fillText(i.toString().padStart(2,'0'),X_GRID + TILE * L.actions[i].coords.x + 2,Y_GRID + TILE * L.actions[i].coords.y + 20)
+    ctx.globalAlpha = 0.8;
+    ctx.fillStyle = "#D3B983"
+    ctx.fillRect(
+      X_GRID + TILE * L.actions[i].coords.x + TEXT_X * TILE / 75,
+      Y_GRID + TILE * L.actions[i].coords.y + TEXT_Y * TILE / 75,
+      TEXT_SX * TILE / 75, TEXT_SY * TILE / 75
+    )
+    ctx.globalAlpha = 1;
+
+    ctx.fillStyle = "#b52012" // c22b71 973B34 9D5637 CB6A36 7A622F 983C35 d12a1d b52012
+		ctx.fillText(
+      i.toString().padStart(2,'0'),
+      X_GRID + TILE * L.actions[i].coords.x + TEXT_X * TILE / 75,
+      Y_GRID + TILE * L.actions[i].coords.y + TEXT_Y * TILE / 75
+    )
 	}
 }
 

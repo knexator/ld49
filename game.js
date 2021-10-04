@@ -998,8 +998,8 @@ function drawgoalarea() {
   let off_x = Math.floor(TILE * (5 - w) / 2) //if these aren't integers, it looks blurry
   let off_y = Math.floor(TILE * (5 - h) / 2)
 
-
-  ctx.drawImage(grid_img, 0, 0, TILE*w, TILE*h, off_x + X_GOAL, off_y + Y_GOAL, TILE*w, TILE*h);
+  let fiddly = h === 5 ? 0 : 1
+  ctx.drawImage(grid_img, 0, 0, 75*w, 75*h-fiddly, off_x + X_GOAL, off_y + Y_GOAL, TILE*w, TILE*h);
 
   for (let i = 0; i < w; i++){
     for (let j = 0; j<h; j++) {

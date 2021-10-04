@@ -1463,8 +1463,8 @@ function check_won() {
   let h = L.goal.length;
   let w = L.goal[0].length;
 
-  for (let x=0; x<N_TILES - w; x++) {
-    for (let y=0; y<N_TILES - h; y++) {
+  for (let x=0; x<=N_TILES - w; x++) {
+    for (let y=0; y<=N_TILES - h; y++) {
       // check if the rect at x,y has won the level
       let skip = false
       for (let i=0; i<w; i++) {

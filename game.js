@@ -798,6 +798,10 @@ muted_img.src = "sound off.png"
 let unmuted_img = new Image();
 unmuted_img.src = "sound.png"
 
+let grid_img = new Image();
+grid_img.src = "grid.png"
+
+
 let sound_place = new Howl({
     src: ['sounds/place.wav']
 });
@@ -994,6 +998,9 @@ function drawgoalarea() {
   let off_x = Math.floor(TILE * (5 - w) / 2) //if these aren't integers, it looks blurry
   let off_y = Math.floor(TILE * (5 - h) / 2)
 
+
+  ctx.drawImage(grid_img, 0, 0, TILE*w, TILE*h, off_x + X_GOAL, off_y + Y_GOAL, TILE*w, TILE*h);
+
   for (let i = 0; i < w; i++){
     for (let j = 0; j<h; j++) {
       if (L.goal[j][i] !== -1) {
@@ -1006,7 +1013,7 @@ function drawgoalarea() {
 	//ctx.drawImage(winbgs[(new Coords(w,h)).str()],X_GOAL + off_x, Y_GOAL + off_y);
 
 
-  ctx.beginPath()
+  /*ctx.beginPath()
   for (let i = 0; i <= w; i++) {
 		ctx.moveTo(X_GOAL + TILE * i + off_x, Y_GOAL + off_y)
 		ctx.lineTo(X_GOAL + TILE * i + off_x, Y_GOAL + h * TILE + off_y)
@@ -1015,7 +1022,7 @@ function drawgoalarea() {
 		ctx.moveTo(X_GOAL + off_x, Y_GOAL + TILE * i + off_y)
 		ctx.lineTo(X_GOAL + w * TILE + off_x, Y_GOAL + TILE * i + off_y)
 	}
-	ctx.stroke()
+	ctx.stroke()*/
 
   if (L.victory_rectangle) {
     let spr_w = level_clear_stamp_image.width * TILE / 75

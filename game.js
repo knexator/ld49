@@ -1541,9 +1541,12 @@ async function placesymbolat(coords, symboltype) { //called when the player plac
 
   // L.symbols_used[used_tile] = true  // hacky thing for undo
   // undo: store how the world is after the action
+  let new_held_tile = held_tile
+  if (new_held_tile !== null) L.symbols_used[new_held_tile] = false
   L.grid_undos.push(grid2blob(L.grid))
   L.actions_undos.push(actions2blob(L.actions))
   L.symbols_used_undos.push([...L.symbols_used])
+  if (new_held_tile !== null) L.symbols_used[new_held_tile] = true
   L.undo_head += 1
 
   // assertion: L.grid === L.grid_undos[L.undo_head]

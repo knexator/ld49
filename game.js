@@ -702,6 +702,7 @@ let L = levels[0]
 
 // let symbols_used = Array(symbol_types.length).fill(false)
 
+let MUTED = false
 let SKIP_ANIMS = false
 
 let TILE = 75
@@ -722,6 +723,12 @@ let X_PASS = 1222
 let Y_PASS = 374
 let X_STAMP = 1110
 let Y_STAMP = 750
+let X_NUMBER = 1317
+let Y_NUMBER = 738
+let X_NUMBER_OFF = 50
+let MUTE_X = 30
+let MUTE_Y = 710
+let MUTE_RECT = [40, 710, 75, 75]
 
 let DEBUG_PUSH_OFF_BORDER = false
 let DEBUG_MOVE_RESPECTFULLY = false
@@ -778,6 +785,19 @@ activation_blocked_image.src = "activation_blocked.png";
 let level_clear_stamp_image = new Image();
 level_clear_stamp_image.src = "level_clear_stamp.png";
 
+let number_imgs = []
+for (let k=0; k<10; k++) {
+  let cur_num_img = new Image();
+  cur_num_img.src = k.toString() + ".png";
+  number_imgs.push(cur_num_img)
+}
+
+let muted_img = new Image();
+muted_img.src = "sound off.png"
+
+let unmuted_img = new Image();
+unmuted_img.src = "sound.png"
+
 let sound_place = new Howl({
     src: ['sounds/place.wav']
 });
@@ -829,6 +849,7 @@ for (let k=0; k<13; k++) {
   bell_sounds.push(
     new Howl({
         src: ['sounds/bells/' + k.toString() + '.wav'],
+        volume: 0.6
     })
   )
 }
@@ -836,6 +857,13 @@ for (let k=0; k<13; k++) {
 tile_sounds = [...bell_sounds]
 tile_sounds.splice(0, 0, bell_sounds[0]);
 tile_sounds.splice(9, 0, sound_place);
+
+/*let pass_sound = new Howl({
+    src: ['sounds/pass.wav'],
+});*/
+
+// same as Noops
+let pass_sound = bell_sounds[0]
 
 function makeWindSound() {
   let sound = wind_sounds[Math.floor(Math.random() * wind_sounds.length)]
@@ -1011,6 +1039,23 @@ function draw_victory_area() {
   }
 }
 
+function draw_level_number() {
+  let digit_a = Math.floor((L.n+1) / 10)
+  let digit_b = (L.n+1) % 10
+  let spr_w = number_imgs[0].width * TILE / 75
+	let spr_h = number_imgs[0].height * TILE / 75
+	ctx.drawImage(number_imgs[digit_a], X_NUMBER, Y_NUMBER, spr_w, spr_h);
+	ctx.drawImage(number_imgs[digit_b], X_NUMBER + X_NUMBER_OFF, Y_NUMBER, spr_w, spr_h);
+
+}
+
+function draw_mute_button() {
+  let spr = MUTED ? muted_img : unmuted_img
+  let spr_w = spr.width * TILE / 75
+	let spr_h = spr.height * TILE / 75
+	ctx.drawImage(spr, MUTE_X, MUTE_Y, spr_w, spr_h);
+}
+
 function draw_button(button) {
   let [x,y,w,h,f,spr] = button
   let pressed = isButtonDown('left') && (mouse.x >= x && mouse.x < x + w && mouse.y >= y && mouse.y < y + h)
@@ -1037,11 +1082,11 @@ window.addEventListener("resize", _e => {
 
 		if (innerWidth / innerHeight > 1500 / 900) {
 			// use all avaliable height
-			canvas.height = Math.floor(innerHeight)
+			canvas.height = Math.floor(innerHeight / 12) * 12
 			canvas.width = Math.floor(canvas.height * 1500 / 900)
 		} else {
 			// use all avaliable width
-			canvas.width = Math.floor(innerWidth)
+			canvas.width = Math.floor(innerWidth / 20) * 20
 			canvas.height = Math.floor(canvas.width * 900 / 1500)
 		}
 	} else {
@@ -1060,7 +1105,7 @@ window.addEventListener("resize", _e => {
 	X_BUTTON_BAR = X_GRID
 	Y_BUTTON_BAR = Math.floor(807 * TILE / 75)*/
 
-	TILE = (canvas.width / 20)
+	TILE = Math.floor(canvas.width / 20)
 	X_GRID = (135 * TILE / 75)
 	Y_GRID = (12 * TILE / 75)
 	X_TABLEAU = (932 * TILE / 75)
@@ -1073,6 +1118,13 @@ window.addEventListener("resize", _e => {
   Y_PASS = 374 * TILE / 75
   X_STAMP = 1110 * TILE / 75
   Y_STAMP = 750 * TILE / 75
+
+  X_NUMBER = 1317 * TILE / 75
+  Y_NUMBER = 738 * TILE / 75
+  X_NUMBER_OFF = 50 * TILE / 75
+  MUTE_X = 30 * TILE / 75
+  MUTE_Y = 710 * TILE / 75
+  MUTE_RECT = [40 * TILE / 75, 710 * TILE / 75, TILE, TILE]
 
 	buttons = [
 	  [X_BUTTON_BAR, Y_BUTTON_BAR, TILE*2, TILE, prevLevel, prevLevel_img],
@@ -1119,6 +1171,14 @@ function draw() {
   		}
   	}
   }
+
+  if (wasButtonPressed('left')) {
+    let [x,y,w,h] = MUTE_RECT
+    if (mouse.x >= x && mouse.x < x + w && mouse.y >= y && mouse.y < y + h) {
+      MUTED = !MUTED
+    }
+  }
+
 	if(wasButtonPressed('left') && held_tile == null) { //held_tile should always be null, just hedging
 		let coords = new Coords(Math.floor((mouse.x - X_TABLEAU) / TILE), Math.floor((mouse.y - Y_TABLEAU) / TILE))
 		if( coords.x >= 0 && coords.x < TAB_COLS && coords.y >= 0 && coords.y < TAB_ROWS) {
@@ -1186,6 +1246,10 @@ function draw() {
   drawheldtile();
 
   buttons.forEach(draw_button)
+
+  draw_level_number();
+
+  draw_mute_button()
 
   //something goes here
 
@@ -1526,7 +1590,7 @@ async function placesymbolat(coords, symboltype) { //called when the player plac
   // L.symbols_used[used_tile] = false; // hacky thing for undo
 
   // sound_place.play()
-  if (used_tile !== 9) tile_sounds[used_tile].seek(0.2)
+  // if ([0,1,2].indexOf(used_tile) === -1) tile_sounds[used_tile].seek(0.2)
   tile_sounds[used_tile].play()
 
   s = new symboltype(coords);
@@ -1664,6 +1728,7 @@ function blob2actions(blob, grid) {
 }
 
 async function passTurn() {
+  pass_sound.play()
   await doturn()
 
   L.grid_undos = L.grid_undos.slice(0, L.undo_head + 1)

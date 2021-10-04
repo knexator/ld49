@@ -271,6 +271,31 @@ class TaxiCab extends Symbol {
       return taxiCabDist(thingy.coords, this.coords)
     })
     let min_dist = Math.min(...dists)
+
+    let drawn = 0;
+    for (var d = 1; d <= min_dist; d++) {
+      drawn = 0;
+      for (let c = 0; c < 4; c++) {
+        for (let n = 0; n < d; n++) {
+          let coor = this.coords.add(
+            threebythreeoffsets[c*2+1].scalar(d)
+          ).add(
+            threebythreeoffsets[(c*2+4)%8].scalar(n)
+          )
+          if (inBounds(coor)) {
+            extra_draw_code.push(() => drawactedtile(coor))
+            drawn += 1
+          }
+        }
+      }
+      if (drawn === 0) break
+      await sleep(100)
+      if (d < min_dist) {
+        for (let k=0; k<drawn; k++) {
+          extra_draw_code.pop()
+        }
+      }
+    }
     if (min_dist < Infinity) {
       // warning: Object.entries(L.grid).foreach doesn't work well with animation
       let level_objects = Object.entries(L.grid)
@@ -281,6 +306,9 @@ class TaxiCab extends Symbol {
         await sleep(50)
       }
       await sleep(50)
+      for (let k=0; k<drawn; k++) {
+        extra_draw_code.pop()
+      }
     }
     /*let new_coors = this.coords.add(new Coords(0, 1))
     if (inBounds(new_coors) && !occupied(new_coors)) {

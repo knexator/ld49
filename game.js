@@ -737,6 +737,9 @@ activatingtile_image.src = "activation_2.png";
 let actedtile_image = new Image();
 actedtile_image.src = "activation.png";
 
+let activation_blocked_image = new Image();
+activation_blocked_image.src = "activation_blocked.png";
+
 winbgs = {}; //this should be a multidimensional array but I can't be bothered
 for (let i = 1; i <= 5; i++){
 	for (let j = 1; j <= 5; j++){
@@ -1255,6 +1258,18 @@ async function activate_at(coords) {
     return true;
   }
   if (checkforblocker(symbol)) {
+    extra_draw_code.pop()
+    extra_draw_code.push(() => {
+  		spr_w = activation_blocked_image.width * TILE / 75
+  		spr_h = activation_blocked_image.height * TILE / 75
+  		ctx.drawImage(
+  			activation_blocked_image,
+  			Math.floor(X_GRID + coords.x * TILE + (TILE - spr_w)/2),
+  			Math.floor(Y_GRID + coords.y * TILE + (TILE - spr_h)/2),
+  			spr_w, spr_h
+  		)
+  	})
+    await sleep(50);
     extra_draw_code.pop()
     return false
   }

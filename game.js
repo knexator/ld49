@@ -1176,6 +1176,7 @@ function draw() {
     let [x,y,w,h] = MUTE_RECT
     if (mouse.x >= x && mouse.x < x + w && mouse.y >= y && mouse.y < y + h) {
       MUTED = !MUTED
+      Howler.mute(MUTED)
     }
   }
 

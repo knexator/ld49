@@ -759,6 +759,7 @@ function drawgridelements() {
   }
 }
 
+/*
 function drawactionqueue() { //don't think we need this anymore
   ctx.beginPath()
   ctx.moveTo(0, canvas.height - TILE);
@@ -770,6 +771,7 @@ function drawactionqueue() { //don't think we need this anymore
   }
   ctx.stroke();
 }
+*/
 
 function drawactionnumbers() {
 	if (DEBUG_HIDE_NUMBERS) { return }
@@ -797,8 +799,8 @@ function drawtableauelements() {
 	for (let i = 0; i < symbol_types.length; i++){
 		if(!L.symbols_used[i]){
 			ctx.drawImage(
-        images[i], X_TABLEAU + (i % TAB_COLS)*TILE,
-        Y_TABLEAU + Math.floor(i/TAB_COLS)*TILE, TILE, TILE)
+			images[i], X_TABLEAU + (i % TAB_COLS)*TILE,
+			Y_TABLEAU + Math.floor(i/TAB_COLS)*TILE, TILE, TILE)
 		}
 	}
 
@@ -823,7 +825,7 @@ function drawgoalarea() {
   for (let i = 0; i < w; i++){
     for (let j = 0; j<h; j++) {
       if (L.goal[j][i] !== -1) {
-        ctx.drawImage(images[L.goal[j][i]], off_x + X_GOAL + TILE * i, off_y + Y_GOAL + j * TILE);
+        ctx.drawImage(images[L.goal[j][i]], off_x + X_GOAL + TILE * i, off_y + Y_GOAL + j * TILE, TILE, TILE);
       }
     }
 	}
@@ -853,29 +855,98 @@ function draw_victory_area() {
     ctx.fillRect(X_GRID + TILE * x, Y_GRID + TILE * y, TILE*w, TILE*h)
 	*/
 	let [x,y,w,h] = L.victory_rectangle
-	ctx.drawImage(winbgs[(new Coords(w,h)).str()],X_GRID + TILE * x, Y_GRID + TILE * y); 
+	let spr = winbgs[(new Coords(w,h)).str()]
+	let spr_w = spr.width * TILE / 75
+	let spr_h = spr.height * TILE / 75
+	ctx.drawImage(spr, X_GRID + TILE * x, Y_GRID + TILE * y, spr_w, spr_h);
   }
 }
 
 function draw_button(button) {
   let [x,y,w,h,f,spr] = button
   let pressed = isButtonDown('left') && (mouse.x >= x && mouse.x < x + w && mouse.y >= y && mouse.y < y + h)
+  let spr_w = spr.width * TILE / 75
+  let spr_h = spr.height * TILE / 75
   if (pressed) { 
 	/*
     ctx.fillStyle = "#5278A5"
     ctx.fillRect(x,y,w,h);
 	*/
-	ctx.drawImage(spr.active, Math.floor(x + (w - spr.width)/2),Math.floor(y + (h - spr.height)/2))
+	ctx.drawImage(spr.active, Math.floor(x + (w - spr_w)/2), Math.floor(y + (h - spr_h)/2), spr_w, spr_h)
   }
   else{
   //ctx.drawImage(spr, x, y, w, h)
-	ctx.drawImage(spr, Math.floor(x + (w - spr.width)/2),Math.floor(y + (h - spr.height)/2))
+	ctx.drawImage(spr, Math.floor(x + (w - spr_w)/2),Math.floor(y + (h - spr_h)/2), spr_w, spr_h)
   //ctx.strokeRect(x,y,w,h);
   }
 }
 
+window.addEventListener("resize", _e => {
+	console.log("resizing")
+	if (innerWidth < 1500 || innerHeight < 900) {
+		// player has a small screen
+		
+		if (innerWidth / innerHeight > 1500 / 900) {
+			// use all avaliable height
+			canvas.height = Math.floor(innerHeight)
+			canvas.width = Math.floor(canvas.height * 1500 / 900)
+		} else {
+			// use all avaliable width
+			canvas.width = Math.floor(innerWidth)
+			canvas.height = Math.floor(canvas.width * 900 / 1500)
+		}
+	} else {
+		canvas.width = 1500
+		canvas.height = 900		
+	}
+	
+	/*
+	TILE = Math.floor(canvas.width / 20)
+	X_GRID = Math.floor(135 * TILE / 75)
+	Y_GRID = Math.floor(12 * TILE / 75)
+	X_TABLEAU = Math.floor(932 * TILE / 75)
+	Y_TABLEAU = Math.floor(135 * TILE / 75)
+	X_GOAL = X_TABLEAU
+	Y_GOAL = Math.floor(515 * TILE / 75)
+	X_BUTTON_BAR = X_GRID
+	Y_BUTTON_BAR = Math.floor(807 * TILE / 75)*/
+	
+	TILE = (canvas.width / 20)
+	X_GRID = (135 * TILE / 75)
+	Y_GRID = (12 * TILE / 75)
+	X_TABLEAU = (932 * TILE / 75)
+	Y_TABLEAU = (135 * TILE / 75)
+	X_GOAL = X_TABLEAU
+	Y_GOAL = (515 * TILE / 75)
+	X_BUTTON_BAR = X_GRID
+	Y_BUTTON_BAR = (807 * TILE / 75)
+	
+	buttons = [
+	  [X_BUTTON_BAR, Y_BUTTON_BAR, TILE*2, TILE, prevLevel, prevLevel_img],
+	  [X_BUTTON_BAR + TILE*2, Y_BUTTON_BAR, TILE*2, TILE, undo, undo_img],
+	  [X_BUTTON_BAR + TILE*4, Y_BUTTON_BAR, TILE*2, TILE, reset, reset_img],
+	  [X_BUTTON_BAR + TILE*6, Y_BUTTON_BAR, TILE*2, TILE, redo, redo_img],
+	  [X_BUTTON_BAR + TILE*8, Y_BUTTON_BAR, TILE*2, TILE, nextLevel, nextLevel_img],
+	]
+		
+	/*
+	let TILE = 75
+
+	let X_GRID = 135 //these values should be able to be messed with and not cause problems
+	let Y_GRID = 12
+	let X_TABLEAU = 932
+	let Y_TABLEAU = 135
+	let TAB_COLS = 5
+	let TAB_ROWS = Math.ceil(symbol_types.length/TAB_COLS) // I think this line should stay as this
+	let X_GOAL = X_TABLEAU
+	let Y_GOAL = 515
+	let X_BUTTON_BAR = X_GRID
+	let Y_BUTTON_BAR = 807
+	*/
+});
+
 window.addEventListener("load", _e => {
-  // window.dispatchEvent(new Event('resize'));
+  window.dispatchEvent(new Event('resize'));
   window.requestAnimationFrame(draw);
 });
 
@@ -937,7 +1008,7 @@ function draw() {
   }
 
 
- ctx.drawImage(ui_img, 0, 0);
+ ctx.drawImage(ui_img, 0, 0, canvas.width, canvas.height);
 
   // if (extra_draw_code.length > 0) extra_draw_code[extra_draw_code.length - 1]()
   extra_draw_code.forEach(f => f());
@@ -1049,13 +1120,27 @@ function pushactivatingtile(coords) {
 	})
 	*/
 	extra_draw_code.push(() => {
-		ctx.drawImage(activatingtile_image,Math.floor(X_GRID + coords.x * TILE + (TILE - activatingtile_image.width)/2), Math.floor(Y_GRID + coords.y * TILE + (TILE - activatingtile_image.height)/2) )
+		spr_w = activatingtile_image.width * TILE / 75
+		spr_h = activatingtile_image.height * TILE / 75
+		ctx.drawImage(
+			activatingtile_image,
+			Math.floor(X_GRID + coords.x * TILE + (TILE - spr_w)/2),
+			Math.floor(Y_GRID + coords.y * TILE + (TILE - spr_h)/2),
+			spr_w, spr_h
+		)
 	})
 }
 
 
 function drawactedtile(coords) {
-	ctx.drawImage(actedtile_image,Math.floor(X_GRID + coords.x * TILE + (TILE - activatingtile_image.width)/2), Math.floor(Y_GRID + coords.y * TILE + (TILE - activatingtile_image.height)/2) )
+	spr_w = activatingtile_image.width * TILE / 75
+	spr_h = activatingtile_image.height * TILE / 75
+	ctx.drawImage(
+		actedtile_image,
+		Math.floor(X_GRID + coords.x * TILE + (TILE - spr_w)/2),
+		Math.floor(Y_GRID + coords.y * TILE + (TILE - spr_h)/2),
+		spr_w,  spr_h
+	)
 }
 
 // DESIGN DECISIONS

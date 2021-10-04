@@ -152,11 +152,16 @@ class Rotator extends Symbol {
     console.log("hoasdf")
     extra_draw_code.push(() => {
       console.log("asdfklñjasdflñ")
+	  /*
       ctx.fillStyle = "red"
       ctx.fillRect(
         X_GRID + TILE * this.coords.x - TILE * 1.1,
         Y_GRID + TILE * this.coords.y - TILE * 1.1,
         TILE * 3.2, TILE * 3.2)
+		*/
+		for (const offset of threebythreeoffsets){
+			drawactedtile(this.coords.add(offset));
+		}
     })
     for (var k = 0; k < 8; k++) {
       let offset_coor = this.coords.add(threebythreeoffsets[k])
@@ -398,6 +403,7 @@ class Preserver extends Symbol {
 	}
 }
 */
+
 class OrthoCopier extends Symbol {
   sprite = images[11]
   /*constructor(coords) {
@@ -532,12 +538,28 @@ let symbol_types = [
   Kamikaze,
   LeftSpreader,
   AboveBelow,
-  Survivor, // 15
+  //Survivor, // 15
   /*Nooper,
   Nooper,*/
 ]
 
 let level_goals = [
+  [ //some tutorial-y levels that force you to have at least a little understanding of what all the symbols do - first one is particularly trivial
+    [ 0,  1], //hopefully they place them in order 0-1-13-12, so they're suprised when 13 does something
+    [13, 12],
+  ],
+  [
+	[14,  8], 
+    [ 6,  5],
+  ],
+  [
+	[ 2,  3],
+    [ 4,  9],
+  ],
+  [
+	[ 7, -1], 
+    [10, 11],
+  ],
   [
     [-1, -1, -1],
     [-1,  8, -1],
@@ -545,9 +567,62 @@ let level_goals = [
     [-1, -1, -1],
   ],
   [
-    [-1,  8, -1],
-    [ 3,  2, 13],
-    [-1,  4, -1],
+	[ 9,  9,  9,  9,  9],
+    [ 9, -1, -1, -1,  9],
+    [ 9, -1,  2, -1,  9],
+    [ 9, -1, -1, -1,  9],
+	[ 9,  9,  9,  9,  9],
+  ],
+  [
+	[-1, -1, -1, -1, -1],  //WINCON CHECKING SEEMS TO SCREW UP ON THIS ONE
+	[-1, 10, 10, 10, -1],
+	[-1, -1, -1, -1, -1],
+  ],
+  [
+	[-1, -1, -1, -1, -1],
+    [-1, -1,  8, -1, -1],
+    [-1,  3,  2, 13, -1],
+    [-1, -1,  4, -1, -1],
+	[-1, -1, -1, -1, -1],
+  ],
+  [ 
+	[-1, -1, -1, -1], 
+    [-1,  1,  1, -1],
+    [-1,  1,  1, -1],
+    [-1, -1, -1, -1],
+  ],
+  [
+	[-1, -1, -1, -1,  0],
+    [-1, -1, -1,  0, -1],
+    [-1, -1,  0, -1, -1],
+    [-1,  0, -1, -1, -1],
+	[ 0, -1, -1, -1, -1],
+  ],
+  [
+	[-1, -1, -1, -1, -1],
+    [-1, -1, -1, -1, -1],
+    [-1, -1,  9, -1, -1],
+    [-1, -1, -1, -1, -1],
+	[-1, -1, -1, -1, -1],
+  ],
+  [
+    [14, 14, 14], //no idea if this is possible with the center tile being empty instead of noop - feels like it'd be quite hard, if it is possible.
+    [14,  1, 14],
+    [14, 14, 14],
+  ],
+  [
+	[ 0,  0,  0,  0,  0],
+    [ 0, -1, -1, -1,  0],
+    [ 0, -1,  0, -1,  0],
+    [ 0, -1, -1, -1,  0],
+	[ 0,  0,  0,  0,  0],
+  ],
+  [
+	[-1, -1, -1, -1, -1],
+    [-1,  7,  7,  7, -1],
+    [-1,  7,  7,  7, -1],
+    [-1,  7,  7,  7, -1],
+	[-1, -1, -1, -1, -1],
   ],
 ]
 
@@ -590,20 +665,20 @@ let L = levels[0]
 
 let SKIP_ANIMS = false
 
-let TILE = canvas.width / 16
+let TILE = 75
 let ACTION_TIME = 100
 let N_TILES = 10
 
-let X_GRID = TILE / 3 //these values should be able to be messed with and not cause problems
-let Y_GRID = TILE / 3
-let X_TABLEAU = canvas.width - TILE*5 - TILE / 3
-let Y_TABLEAU = TILE / 3 + TILE
+let X_GRID = 135 //these values should be able to be messed with and not cause problems
+let Y_GRID = 12
+let X_TABLEAU = 932
+let Y_TABLEAU = 135
 let TAB_COLS = 5
-let TAB_ROWS = 4 // Math.ceil(symbol_types.length/TAB_COLS)
+let TAB_ROWS = Math.ceil(symbol_types.length/TAB_COLS) // I think this line should stay as this
 let X_GOAL = X_TABLEAU
-let Y_GOAL = canvas.height - 5 * TILE - TILE / 3
+let Y_GOAL = 515
 let X_BUTTON_BAR = X_GRID
-let Y_BUTTON_BAR = canvas.height - TILE - TILE / 3
+let Y_BUTTON_BAR = 807
 
 let DEBUG_PUSH_OFF_BORDER = false
 let DEBUG_MOVE_RESPECTFULLY = false
@@ -618,20 +693,44 @@ let held_tile = null;
 
 let extra_draw_code = []
 
-let prevLevel_img = new Image();
-prevLevel_img.src = "prev.png";
+let prevLevel_img = new Image(); //this is an awkward way to do it, but I think it's okay
+prevLevel_img.src = "prev75.png";
+prevLevel_img.active = new Image();
+prevLevel_img.active.src = 'active arrow.png';
 
 let nextLevel_img = new Image();
-nextLevel_img.src = "next.png";
+nextLevel_img.src = "next75.png";
+nextLevel_img.active = new Image();
+nextLevel_img.active.src = 'active arrow right.png';
 
 let reset_img = new Image();
-reset_img.src = "reset.png";
+reset_img.src = "reset75.png";
+reset_img.active = new Image();
+reset_img.active.src = 'reset active.png';
 
 let undo_img = new Image();
-undo_img.src = "undo.png";
+undo_img.src = "undo75.png";
+undo_img.active = new Image();
+undo_img.active.src = 'undo active.png';
 
 let redo_img = new Image();
-redo_img.src = "redo.png";
+redo_img.src = "redo75.png";
+redo_img.active = new Image();
+redo_img.active.src = 'active undo right.png';
+
+let activatingtile_image = new Image();
+activatingtile_image.src = "activation_2.png";
+
+let actedtile_image = new Image();
+actedtile_image.src = "activation.png";
+
+winbgs = {}; //this should be a multidimensional array but I can't be bothered
+for (let i = 1; i <= 5; i++){
+	for (let j = 1; j <= 5; j++){
+		winbgs[i.toString() + "," + j.toString()] = new Image();
+		winbgs[i.toString() + "," + j.toString()].src = "winbgs/" + i.toString() + "x" + j.toString() + ".png";
+	}
+}
 
 let buttons = [
   [X_BUTTON_BAR, Y_BUTTON_BAR, TILE*2, TILE, prevLevel, prevLevel_img],
@@ -674,9 +773,10 @@ function drawactionqueue() { //don't think we need this anymore
 
 function drawactionnumbers() {
 	if (DEBUG_HIDE_NUMBERS) { return }
-	ctx.font = '20px sans-serrif'
+	ctx.font = 'bold 25px Comic Sans MS' //please for the love of god find a better option
+	ctx.fillStyle = "#c22b71"
 	for (let i = 0; i < L.actions.length; i++) {
-		ctx.strokeText(i.toString().padStart(2,'0'),X_GRID + TILE * L.actions[i].coords.x,Y_GRID + TILE * L.actions[i].coords.y + 20) //TODO make this not awful (20)
+		ctx.fillText(i.toString().padStart(2,'0'),X_GRID + TILE * L.actions[i].coords.x + 2,Y_GRID + TILE * L.actions[i].coords.y + 20)
 	}
 }
 
@@ -706,7 +806,7 @@ function drawtableauelements() {
 
 function drawheldtile() {
 	if( held_tile !== null) {
-		ctx.drawImage(images[held_tile], mouse.x - TILE/2,mouse.y - TILE/2, TILE, TILE);
+		ctx.drawImage(images[held_tile], Math.floor(mouse.x - TILE/2), Math.floor(mouse.y - TILE/2), TILE, TILE);
 		// ctx.drawImage((new symbol_types[held_tile]()).sprite,mouse.x - TILE/2,mouse.y - TILE/2, TILE, TILE);
 	}
 }
@@ -715,19 +815,23 @@ function drawgoalarea() {
   let h = L.goal.length;
   let w = L.goal[0].length;
 
-  ctx.strokeRect(X_GOAL, Y_GOAL, TILE * 5, TILE * 5)
+  //ctx.strokeRect(X_GOAL, Y_GOAL, TILE * 5, TILE * 5)
 
-  let off_x = TILE * (5 - w) / 2
-  let off_y = TILE * (5 - h) / 2
+  let off_x = Math.floor(TILE * (5 - w) / 2) //if these aren't integers, it looks blurry
+  let off_y = Math.floor(TILE * (5 - h) / 2)
 
   for (let i = 0; i < w; i++){
     for (let j = 0; j<h; j++) {
       if (L.goal[j][i] !== -1) {
-        ctx.drawImage(images[L.goal[j][i]], off_x + X_GOAL + TILE * i, off_y + Y_GOAL + j * TILE, TILE, TILE);
+        ctx.drawImage(images[L.goal[j][i]], off_x + X_GOAL + TILE * i, off_y + Y_GOAL + j * TILE);
       }
     }
 	}
-
+	
+	
+	//ctx.drawImage(winbgs[(new Coords(w,h)).str()],X_GOAL + off_x, Y_GOAL + off_y); 
+	
+  
   ctx.beginPath()
   for (let i = 0; i <= w; i++) {
 		ctx.moveTo(X_GOAL + TILE * i + off_x, Y_GOAL + off_y)
@@ -738,25 +842,36 @@ function drawgoalarea() {
 		ctx.lineTo(X_GOAL + w * TILE + off_x, Y_GOAL + TILE * i + off_y)
 	}
 	ctx.stroke()
+	
 }
 
 function draw_victory_area() {
   if (L.victory_rectangle) {
+	 /*
     ctx.fillStyle = "green"
     let [x,y,w,h] = L.victory_rectangle
     ctx.fillRect(X_GRID + TILE * x, Y_GRID + TILE * y, TILE*w, TILE*h)
+	*/
+	let [x,y,w,h] = L.victory_rectangle
+	ctx.drawImage(winbgs[(new Coords(w,h)).str()],X_GRID + TILE * x, Y_GRID + TILE * y); 
   }
 }
 
 function draw_button(button) {
   let [x,y,w,h,f,spr] = button
   let pressed = isButtonDown('left') && (mouse.x >= x && mouse.x < x + w && mouse.y >= y && mouse.y < y + h)
-  if (pressed) {
+  if (pressed) { 
+	/*
     ctx.fillStyle = "#5278A5"
     ctx.fillRect(x,y,w,h);
+	*/
+	ctx.drawImage(spr.active, Math.floor(x + (w - spr.width)/2),Math.floor(y + (h - spr.height)/2))
   }
-  ctx.drawImage(spr, x, y, w, h)
-  ctx.strokeRect(x,y,w,h);
+  else{
+  //ctx.drawImage(spr, x, y, w, h)
+	ctx.drawImage(spr, Math.floor(x + (w - spr.width)/2),Math.floor(y + (h - spr.height)/2))
+  //ctx.strokeRect(x,y,w,h);
+  }
 }
 
 window.addEventListener("load", _e => {
@@ -815,10 +930,10 @@ function draw() {
   if (wasKeyPressed('z')) undo()
 
   if (wasKeyPressed('m')) {
-    L = levels[L.n + 1]
+    L = levels[L.n + 1] //DOESN'T RESPECT BOUNDARIES TODO
   }
   if (wasKeyPressed('n')) {
-    L = levels[L.n - 1]
+    L = levels[L.n - 1] //DOESN'T RESPECT BOUNDARIES
   }
 
 
@@ -831,7 +946,7 @@ function draw() {
 
   drawgridelements();
 
-  drawgrid();
+  //drawgrid();
 
   //drawactionqueue();
 
@@ -839,7 +954,7 @@ function draw() {
 
   drawtableauelements();
 
-  drawtableau();
+  //drawtableau();
 
   drawgoalarea();
 
@@ -924,6 +1039,25 @@ function _quietDelete(symbol) {
   L.grid[to_coords.str()] = symbol
 }*/
 
+// Action highlights and such
+
+function pushactivatingtile(coords) {
+	/*
+	extra_draw_code.push(() => {
+		ctx.fillStyle = "red"
+		ctx.fillRect(coords.x * TILE - TILE*.1 + X_GRID, coords.y * TILE - TILE*.1 + Y_GRID, TILE * 1.2, TILE  * 1.2)
+	})
+	*/
+	extra_draw_code.push(() => {
+		ctx.drawImage(activatingtile_image,Math.floor(X_GRID + coords.x * TILE + (TILE - activatingtile_image.width)/2), Math.floor(Y_GRID + coords.y * TILE + (TILE - activatingtile_image.height)/2) )
+	})
+}
+
+
+function drawactedtile(coords) {
+	ctx.drawImage(actedtile_image,Math.floor(X_GRID + coords.x * TILE + (TILE - activatingtile_image.width)/2), Math.floor(Y_GRID + coords.y * TILE + (TILE - activatingtile_image.height)/2) )
+}
+
 // DESIGN DECISIONS
 // if we use these helper functions consistently, we can quickly adjust the game's behaviour
 // (it will also help with graphics)
@@ -933,7 +1067,7 @@ async function kill_at(coords, explicit_kill=true) {
   if (explicit_kill) {
     extra_draw_code.push(() => {
       ctx.fillStyle = "red"
-      if (inBounds(coords)) ctx.fillRect(coords.x * TILE + X_GRID, coords.y * TILE + Y_GRID, TILE, TILE)
+      if (inBounds(coords)) { drawactedtile(coords) }
     })
   }
 
@@ -958,8 +1092,8 @@ async function move_to(from_coords, to_coords) {
   // console.log("called move_to")
   extra_draw_code.push(() => {
     ctx.fillStyle = "red"
-    if (inBounds(from_coords)) ctx.fillRect(from_coords.x * TILE + X_GRID, from_coords.y * TILE + Y_GRID, TILE, TILE)
-    if (inBounds(to_coords)) ctx.fillRect(to_coords.x * TILE + X_GRID, to_coords.y * TILE + Y_GRID, TILE, TILE)
+    if (inBounds(from_coords)) { drawactedtile(from_coords) }
+    if (inBounds(to_coords)) { drawactedtile(to_coords) }
   })
   if (!inBounds(from_coords)) {
     extra_draw_code.pop()
@@ -1011,10 +1145,7 @@ async function move_to(from_coords, to_coords) {
 
 // activate the stuff
 async function activate_at(coords) {
-  extra_draw_code.push(() => {
-    ctx.fillStyle = "red"
-    ctx.fillRect(coords.x * TILE - TILE*.1 + X_GRID, coords.y * TILE - TILE*.1 + Y_GRID, TILE * 1.2, TILE  * 1.2)
-  })
+  pushactivatingtile(coords)
   let symbol = L.grid[coords.str()]
   if (symbol === undefined) {
     // this will be used for graphics
@@ -1100,9 +1231,9 @@ function checkforblocker(symbol) {
 
 let images = []
 
-for (k = 1; k < 19; k++) {
+for (k = 1; k < 17; k++) { //setting this too high will cause errors that are supressed locally, but make the game not work when uploaded to itch
   let cur_img = new Image();
-  cur_img.src = "icons/s" + k.toString() + ".png";
+  cur_img.src = "icons/super" + k.toString() + ".png";
   images.push(cur_img)
 }
 

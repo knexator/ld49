@@ -549,7 +549,7 @@ let level_goals = [
     [13, 12],
   ],
   [
-	[14,  8], 
+	[14,  8],
     [ 6,  5],
   ],
   [
@@ -557,7 +557,7 @@ let level_goals = [
     [ 4,  9],
   ],
   [
-	[ 7, -1], 
+	[ 7, -1],
     [10, 11],
   ],
   [
@@ -585,8 +585,8 @@ let level_goals = [
     [-1, -1,  4, -1, -1],
 	[-1, -1, -1, -1, -1],
   ],
-  [ 
-	[-1, -1, -1, -1], 
+  [
+	[-1, -1, -1, -1],
     [-1,  1,  1, -1],
     [-1,  1,  1, -1],
     [-1, -1, -1, -1],
@@ -679,6 +679,8 @@ let X_GOAL = X_TABLEAU
 let Y_GOAL = 515
 let X_BUTTON_BAR = X_GRID
 let Y_BUTTON_BAR = 807
+let X_PASS = 1222
+let Y_PASS = 374
 
 let DEBUG_PUSH_OFF_BORDER = false
 let DEBUG_MOVE_RESPECTFULLY = false
@@ -718,6 +720,11 @@ redo_img.src = "redo75.png";
 redo_img.active = new Image();
 redo_img.active.src = 'active undo right.png';
 
+let passTurn_img = new Image();
+passTurn_img.src = "pass turn.png";
+passTurn_img.active = new Image();
+passTurn_img.active.src = 'pass turn pressed.png';
+
 let activatingtile_image = new Image();
 activatingtile_image.src = "activation_2.png";
 
@@ -738,6 +745,7 @@ let buttons = [
   [X_BUTTON_BAR + TILE*4, Y_BUTTON_BAR, TILE*2, TILE, reset, reset_img],
   [X_BUTTON_BAR + TILE*6, Y_BUTTON_BAR, TILE*2, TILE, redo, redo_img],
   [X_BUTTON_BAR + TILE*8, Y_BUTTON_BAR, TILE*2, TILE, nextLevel, nextLevel_img],
+  [X_PASS, Y_PASS, TILE*5, TILE*5, passTurn, passTurn_img],
 ]
 
 function drawgrid() {
@@ -829,11 +837,11 @@ function drawgoalarea() {
       }
     }
 	}
-	
-	
-	//ctx.drawImage(winbgs[(new Coords(w,h)).str()],X_GOAL + off_x, Y_GOAL + off_y); 
-	
-  
+
+
+	//ctx.drawImage(winbgs[(new Coords(w,h)).str()],X_GOAL + off_x, Y_GOAL + off_y);
+
+
   ctx.beginPath()
   for (let i = 0; i <= w; i++) {
 		ctx.moveTo(X_GOAL + TILE * i + off_x, Y_GOAL + off_y)
@@ -844,7 +852,7 @@ function drawgoalarea() {
 		ctx.lineTo(X_GOAL + w * TILE + off_x, Y_GOAL + TILE * i + off_y)
 	}
 	ctx.stroke()
-	
+
 }
 
 function draw_victory_area() {
@@ -867,7 +875,7 @@ function draw_button(button) {
   let pressed = isButtonDown('left') && (mouse.x >= x && mouse.x < x + w && mouse.y >= y && mouse.y < y + h)
   let spr_w = spr.width * TILE / 75
   let spr_h = spr.height * TILE / 75
-  if (pressed) { 
+  if (pressed) {
 	/*
     ctx.fillStyle = "#5278A5"
     ctx.fillRect(x,y,w,h);
@@ -885,7 +893,7 @@ window.addEventListener("resize", _e => {
 	console.log("resizing")
 	if (innerWidth < 1500 || innerHeight < 900) {
 		// player has a small screen
-		
+
 		if (innerWidth / innerHeight > 1500 / 900) {
 			// use all avaliable height
 			canvas.height = Math.floor(innerHeight)
@@ -897,9 +905,9 @@ window.addEventListener("resize", _e => {
 		}
 	} else {
 		canvas.width = 1500
-		canvas.height = 900		
+		canvas.height = 900
 	}
-	
+
 	/*
 	TILE = Math.floor(canvas.width / 20)
 	X_GRID = Math.floor(135 * TILE / 75)
@@ -910,7 +918,7 @@ window.addEventListener("resize", _e => {
 	Y_GOAL = Math.floor(515 * TILE / 75)
 	X_BUTTON_BAR = X_GRID
 	Y_BUTTON_BAR = Math.floor(807 * TILE / 75)*/
-	
+
 	TILE = (canvas.width / 20)
 	X_GRID = (135 * TILE / 75)
 	Y_GRID = (12 * TILE / 75)
@@ -920,15 +928,18 @@ window.addEventListener("resize", _e => {
 	Y_GOAL = (515 * TILE / 75)
 	X_BUTTON_BAR = X_GRID
 	Y_BUTTON_BAR = (807 * TILE / 75)
-	
+  X_PASS = 1222 * TILE / 75
+  Y_PASS = 374 * TILE / 75
+
 	buttons = [
 	  [X_BUTTON_BAR, Y_BUTTON_BAR, TILE*2, TILE, prevLevel, prevLevel_img],
 	  [X_BUTTON_BAR + TILE*2, Y_BUTTON_BAR, TILE*2, TILE, undo, undo_img],
 	  [X_BUTTON_BAR + TILE*4, Y_BUTTON_BAR, TILE*2, TILE, reset, reset_img],
 	  [X_BUTTON_BAR + TILE*6, Y_BUTTON_BAR, TILE*2, TILE, redo, redo_img],
 	  [X_BUTTON_BAR + TILE*8, Y_BUTTON_BAR, TILE*2, TILE, nextLevel, nextLevel_img],
+    [X_PASS, Y_PASS, TILE*5, TILE*5, passTurn, passTurn_img],
 	]
-		
+
 	/*
 	let TILE = 75
 
@@ -995,7 +1006,7 @@ function draw() {
   }
 
   // warning: messes up undo
-  if (wasKeyPressed(' ') && DEBUG_ALLOW_PASS_WITH_SPACE) doturn()
+  /*if (wasKeyPressed(' ') && DEBUG_ALLOW_PASS_WITH_SPACE) doturn()
 
   if (wasKeyPressed('r')) reset_level(L)
   if (wasKeyPressed('z')) undo()
@@ -1005,7 +1016,7 @@ function draw() {
   }
   if (wasKeyPressed('n')) {
     L = levels[L.n - 1] //DOESN'T RESPECT BOUNDARIES
-  }
+  }*/
 
 
  ctx.drawImage(ui_img, 0, 0, canvas.width, canvas.height);
@@ -1485,6 +1496,25 @@ function blob2actions(blob, grid) {
   return blob.map(([x, y]) => {
     return grid[new Coords(x, y).str()]
   })
+}
+
+async function passTurn() {
+  await doturn()
+
+  L.grid_undos = L.grid_undos.slice(0, L.undo_head + 1)
+  L.actions_undos = L.actions_undos.slice(0, L.undo_head + 1)
+  L.symbols_used_undos = L.symbols_used_undos.slice(0, L.undo_head + 1)
+
+  // L.symbols_used[used_tile] = true  // hacky thing for undo
+  // undo: store how the world is after the action
+  L.grid_undos.push(grid2blob(L.grid))
+  L.actions_undos.push(actions2blob(L.actions))
+  L.symbols_used_undos.push([...L.symbols_used])
+  L.undo_head += 1
+
+  // assertion: L.grid === L.grid_undos[L.undo_head]
+
+  L.victory_rectangle = check_won()
 }
 
 function undo() {

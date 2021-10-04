@@ -218,6 +218,8 @@ class RunAway extends Symbol {
       let clonable_coor = this.coords.add(offsets[valid_k % 4])
       let old_coor = this.coords.clone()
       let moveTo_coor = this.coords.add(offsets[(valid_k + 2) % 4])
+      extra_draw_code.pop()
+      pushactivatingtile(moveTo_coor)
       await move_to(old_coor, moveTo_coor)
       /*if (DEBUG_WALK_OUTOFBONDS) {
         // option 1: stuff keeps moving even if it means suicide
@@ -240,6 +242,8 @@ class RunAway extends Symbol {
       await clone_tile(clonable_coor, old_coor)
       await sleep(100)
       //makesymbolat(old_coor, closePiece.constructor)
+    } else {
+      await sleep(100)
     }
     /*for (var k = 0; k < 8; k++) {
       let offset_coor = this.coords.add(threebythreeoffsets[k])
@@ -450,7 +454,7 @@ class OrthoCopier extends Symbol {
 		  if (L.grid[offset_coor.str()].constructor.name !== "OrthoCopier"){
 			// makesymbolat(offset_coor, OrthoCopier)
 			await clone_tile(this.coords, offset_coor)
-			await sleep(20)
+			await sleep(100)
 		  }
       }
     }
@@ -502,7 +506,7 @@ class AboveBelow extends Symbol {
     let obj_below_type = L.grid[this.coords.add(new Coords(0, 1)).str()]?.constructor // possibly undefined
 
     if (obj_above_type === undefined || obj_below_type === undefined) {
-      await sleep(20)
+      await sleep(100)
       return
     }
 
@@ -678,6 +682,7 @@ function preload_level(goal, n) {
 }
 
 function reset() {
+  sound_reset.play()
   L.grid = {}
   L.actions = []
   L.symbols_used = Array(symbol_types.length).fill(false)
@@ -772,6 +777,57 @@ activation_blocked_image.src = "activation_blocked.png";
 
 let level_clear_stamp_image = new Image();
 level_clear_stamp_image.src = "level_clear_stamp.png";
+
+let sound_place = new Howl({
+    src: ['sounds/place.wav']
+});
+
+let sound_undo = new Howl({
+    src: ['sounds/undo.wav']
+});
+
+let sound_redo = new Howl({
+    src: ['sounds/redo.wav']
+});
+
+let sound_reset = new Howl({
+    src: ['sounds/reset.wav']
+});
+
+let changeLevel_sound = new Howl({
+    src: ['sounds/idk.wav']
+});
+
+// idk if this a bit much
+let activate_sound = new Howl({
+    src: ['sounds/activate.wav'],
+    volume: 0.5
+});
+
+let win_sound = new Howl({
+    src: ['sounds/win.wav'],
+});
+
+let wind_sounds = [
+  new Howl({
+      src: ['ambience/Wind.m4a', 'ambience/Wind.ogg'],
+  }),
+  new Howl({
+      src: ['ambience/Wind2.m4a', 'ambience/Wind2.ogg'],
+  }),
+  new Howl({
+      src: ['ambience/Wind3.m4a', 'ambience/Wind3.ogg'],
+  }),
+]
+
+function makeWindSound() {
+  let sound = wind_sounds[Math.floor(Math.random() * wind_sounds.length)]
+  sound.play()
+  // wait between 3 & 8 seconds
+  setTimeout(makeWindSound, Math.floor(Math.random()*5 + 3) * 1000);
+}
+
+makeWindSound()
 
 winbgs = {}; //this should be a multidimensional array but I can't be bothered
 for (let i = 1; i <= 5; i++){
@@ -1333,6 +1389,8 @@ async function activate_at(coords) {
     await sleep(50);
     extra_draw_code.pop()
     return false
+  } else {
+    activate_sound.play()
   }
   await symbol.actfunc()
   extra_draw_code.pop()
@@ -1450,6 +1508,8 @@ async function placesymbolat(coords, symboltype) { //called when the player plac
   let used_tile = held_tile
   // L.symbols_used[used_tile] = false; // hacky thing for undo
 
+  sound_place.play()
+
   s = new symboltype(coords);
   L.grid[coords.str()] = s;
   await s.placefunc();
@@ -1546,6 +1606,7 @@ function check_won() {
         }
       }
       if (!skip) {
+        win_sound.play()
         return [x,y,w,h]
       }
     }
@@ -1601,6 +1662,7 @@ async function passTurn() {
 
 function undo() {
   if (L.undo_head === 0) return
+  sound_undo.play()
   /*
   L.grid = blob2grid(L.grid_undos.pop())
   L.actions = blob2actions(L.actions_undos.pop(), L.grid)
@@ -1616,6 +1678,7 @@ function undo() {
 
 function redo() {
   if (L.undo_head + 1 < L.grid_undos.length) {
+    sound_redo.play()
     L.undo_head += 1
     L.grid = blob2grid(L.grid_undos[L.undo_head])
     L.actions = blob2actions(L.actions_undos[L.undo_head], L.grid)
@@ -1626,12 +1689,14 @@ function redo() {
 
 function prevLevel() {
   if (L.n > 0) {
+    changeLevel_sound.play()
     L = levels[L.n - 1]
   }
 }
 
 function nextLevel() {
   if (L.n + 1 < levels.length) {
+    changeLevel_sound.play()
     L = levels[L.n + 1]
   }
 }

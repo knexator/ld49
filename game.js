@@ -799,10 +799,14 @@ let changeLevel_sound = new Howl({
 });
 
 // idk if this a bit much
-let activate_sound = new Howl({
+/*let activate_sound = new Howl({
     src: ['sounds/activate.wav'],
-    volume: 0.5
-});
+    volume: 0.1
+});*/
+
+activate_sound = { // same as no sound
+  play: () => {}
+}
 
 let win_sound = new Howl({
     src: ['sounds/win.wav'],
@@ -819,6 +823,19 @@ let wind_sounds = [
       src: ['ambience/Wind3.m4a', 'ambience/Wind3.ogg'],
   }),
 ]
+
+let bell_sounds = []
+for (let k=0; k<13; k++) {
+  bell_sounds.push(
+    new Howl({
+        src: ['sounds/bells/' + k.toString() + '.wav'],
+    })
+  )
+}
+
+tile_sounds = [...bell_sounds]
+tile_sounds.splice(0, 0, bell_sounds[0]);
+tile_sounds.splice(9, 0, sound_place);
 
 function makeWindSound() {
   let sound = wind_sounds[Math.floor(Math.random() * wind_sounds.length)]
@@ -1508,7 +1525,9 @@ async function placesymbolat(coords, symboltype) { //called when the player plac
   let used_tile = held_tile
   // L.symbols_used[used_tile] = false; // hacky thing for undo
 
-  sound_place.play()
+  // sound_place.play()
+  if (used_tile !== 9) tile_sounds[used_tile].seek(0.2)
+  tile_sounds[used_tile].play()
 
   s = new symboltype(coords);
   L.grid[coords.str()] = s;

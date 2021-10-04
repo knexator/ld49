@@ -619,6 +619,8 @@ let L = levels[0]
 
 // let symbols_used = Array(symbol_types.length).fill(false)
 
+let SOLVED_LEVELS = levels.map(l => false)
+
 let MUTED = false
 let SKIP_ANIMS = false
 
@@ -941,7 +943,8 @@ function drawgoalarea() {
 	}
 	ctx.stroke()*/
 
-  if (L.victory_rectangle) {
+  //if (L.victory_rectangle) {
+  if (SOLVED_LEVELS[L.n]) {
     let spr_w = level_clear_stamp_image.width * TILE / 75
     let spr_h = level_clear_stamp_image.height * TILE / 75
     ctx.drawImage(level_clear_stamp_image, X_STAMP, Y_STAMP, spr_w, spr_h)
@@ -1152,15 +1155,17 @@ function draw() {
   // if (extra_draw_code.length > 0) extra_draw_code[extra_draw_code.length - 1]()
   extra_draw_code.forEach(f => f());
 
+  drawactionnumbers();
+
   draw_victory_area();
 
   drawgridelements();
 
+
+
   //drawgrid();
 
   //drawactionqueue();
-
-  drawactionnumbers();
 
   drawtableauelements();
 
@@ -1618,6 +1623,7 @@ function check_won() {
       }
       if (!skip) {
         win_sound.play()
+        SOLVED_LEVELS[L.n] = true
         return [x,y,w,h]
       }
     }

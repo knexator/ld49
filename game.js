@@ -687,6 +687,8 @@ let X_BUTTON_BAR = X_GRID
 let Y_BUTTON_BAR = 807
 let X_PASS = 1222
 let Y_PASS = 374
+let X_STAMP = 1110
+let Y_STAMP = 750
 
 let DEBUG_PUSH_OFF_BORDER = false
 let DEBUG_MOVE_RESPECTFULLY = false
@@ -739,6 +741,9 @@ actedtile_image.src = "activation.png";
 
 let activation_blocked_image = new Image();
 activation_blocked_image.src = "activation_blocked.png";
+
+let level_clear_stamp_image = new Image();
+level_clear_stamp_image.src = "level_clear_stamp.png";
 
 winbgs = {}; //this should be a multidimensional array but I can't be bothered
 for (let i = 1; i <= 5; i++){
@@ -862,6 +867,11 @@ function drawgoalarea() {
 	}
 	ctx.stroke()
 
+  if (L.victory_rectangle) {
+    let spr_w = level_clear_stamp_image.width * TILE / 75
+    let spr_h = level_clear_stamp_image.height * TILE / 75
+    ctx.drawImage(level_clear_stamp_image, X_STAMP, Y_STAMP, spr_w, spr_h)
+  }
 }
 
 function draw_victory_area() {
@@ -939,6 +949,8 @@ window.addEventListener("resize", _e => {
 	Y_BUTTON_BAR = (807 * TILE / 75)
   X_PASS = 1222 * TILE / 75
   Y_PASS = 374 * TILE / 75
+  X_STAMP = 1110 * TILE / 75
+  Y_STAMP = 750 * TILE / 75
 
 	buttons = [
 	  [X_BUTTON_BAR, Y_BUTTON_BAR, TILE*2, TILE, prevLevel, prevLevel_img],

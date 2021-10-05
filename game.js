@@ -1154,14 +1154,12 @@ function draw() {
 
   // if (extra_draw_code.length > 0) extra_draw_code[extra_draw_code.length - 1]()
   extra_draw_code.forEach(f => f());
-
-  drawactionnumbers();
-
-  draw_victory_area();
-
+ 
   drawgridelements();
 
-
+  drawactionnumbers();
+  
+  draw_victory_area();
 
   //drawgrid();
 

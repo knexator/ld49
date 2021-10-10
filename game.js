@@ -172,6 +172,8 @@ class Rotator extends Symbol {
           L.grid[offset_coor.str()] = piece;
         } else {
           pending_kill = piece
+          piece.coords = offset_coor;
+          L.grid[offset_coor.str()] = piece;
           //piece.delfunc() // TODO: THIS DOESN'T AWAIT
           // _quietDelete(piece)
           // await
@@ -190,7 +192,8 @@ class Rotator extends Symbol {
       // rotatingPieces.push(L.grid[offset_coor.str()]) // possibly undefined, but no problem
     }
     if (pending_kill) {
-      await kill_at
+      console.log("pending_kill: ", pending_kill)
+      await kill_at(pending_kill.coords)
     }
     await sleep(200)
     extra_draw_code.pop()
@@ -1154,11 +1157,11 @@ function draw() {
 
   // if (extra_draw_code.length > 0) extra_draw_code[extra_draw_code.length - 1]()
   extra_draw_code.forEach(f => f());
- 
+
   drawgridelements();
 
   drawactionnumbers();
-  
+
   draw_victory_area();
 
   //drawgrid();

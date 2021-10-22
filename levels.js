@@ -1,27 +1,95 @@
 let level_goals = [
+  [
+    [-1, -1, -1], //tt basically nothing but it counts
+    [-1,  0, -1],
+    [-1, -1, -1],
+  ],
   [ //some tutorial-y levels that force you to have at least a little understanding of what all the symbols do - first one is particularly trivial
-    [ 0,  1], //hopefully they place them in order 0-1-13-12, so they're suprised when 13 does something
+    [ 0,  1], //tt basic
     [13, 12],
   ],
   [
-    [-1, -1, -1],
+    [-1, -1, -1], //tt 2, 8
     [-1,  8, -1],
     [-1,  2, -1],
     [-1, -1, -1],
   ],
-  /*
-  [ //this level does not spark joy
-	[14,  8],
-    [ 6,  5],
-  ],
-  */
   [
-	[ 2,  3],
-    [ 4,  9],
+	[-1, -1, -1, -1], //partially tt 3,4 - movement only
+    [-1,  3, -1, -1],
+    [-1, -1,  4, -1],
+    [-1, -1, -1, -1],
   ],
   [
-	[ 7, -1],
-    [10, 11],
+    [ 9, -1, -1], //partially tt 9 - expansion only
+    [ 9,  9, -1],
+    [ 9,  9,  9],
+  ],
+  [
+	[-1,  6, -1], //tt 6
+	[-1,  0, -1],
+	[-1,  0, -1],
+	[-1,  0, -1],
+	[-1,  0, -1],
+  ],
+  [
+	[-1, -1, -1, -1, -1], //tt 7 - relies on 6
+    [ 1,  1, -1,  1,  1],
+    [-1, -1, -1, -1, -1],
+	[-1, -1, -1, -1, -1],
+	[-1, -1,  7, -1, -1],
+  ],  
+  [
+    [ 9,  9,  9], //tt rest of 9
+    [ 9,  2,  9],
+    [ 9,  9,  9],
+  ],
+  [ 
+    [ 0, -1], //tt out-of-victory-zone-stuff mattering - think this is worthwhile?  requires 9
+    [ 2,  1],
+  ],
+  [
+	[-1, -1, -1], //tt 5 
+	[-1,  5, -1],
+	[-1,  8, -1],
+	[-1, -1, -1],
+  ],
+  [
+	[-1, -1, -1, -1], //tt 11 - relies on 6
+    [ 1,  1, 11, 11],
+	[-1, -1, -1, -1],
+  ],
+   [
+	[-1, -1, -1], //tt 14 - it's not great, but I can't think of a better one, relies on 6
+	[ 8,  8,  8],
+	[-1, 14, -1],
+	[-1,  0, -1],
+	[-1, -1, -1],
+  ],
+  [
+	[-1, -1, -1, -1], //tt 13
+    [-1,  0,  8, -1],
+    [13, 13, 13, 13],
+    [-1,  1, 12, -1],
+	[-1, -1, -1, -1],
+  ],
+  [
+	[-1, 10, -1], //tt 10
+	[-1,  8, -1],
+	[-1,  8, -1],
+	[-1,  8, -1],
+	[-1,  8, -1],
+  ],
+  [
+	[-1, -1, -1, -1, -1], //tt rest of 4 - I think 3 comes free-ish?  but also can't really think of a way to teach rest of 3 explicitly
+    [-1, -1,  4, -1, -1],
+    [-1,  8, -1,  3, -1],
+    [-1, -1, -1, -1, -1],
+  ],  
+  [
+	[-1, -1, -1, -1, -1], //tt 13 - relies on many others, think this ought to be at the end since it's pretty close to being a 'real' puzzle
+	[13, 13, -1, 13, 13],
+	[-1, -1, -1, -1, -1],
   ],
   [
 	[ 9,  9,  9,  9,  9],
@@ -31,26 +99,12 @@ let level_goals = [
 	[ 9,  9,  9,  9,  9],
   ],
   [
-	[-1, -1, -1], //inelegant, but teaches "14 does things if you put things on both ends" pretty well
-	[ 8,  8,  8],
-	[-1, 14, -1],
-	[-1, 13, -1],
-	[-1, -1, -1],
-  ],
-  [
 	[-1, -1, -1, -1, -1],
     [-1,  1,  1,  6, -1],
     [-1, -1, -1,  0, -1],
     [-1, -1, -1,  0, -1],
 	[-1, -1, -1, -1, -1],
-  ],  
-  [
-	[-1, 13, -1],
-	[-1, 13, -1],
-	[-1, 13, -1],
-	[-1, 13, -1],
-	[-1, 13, -1],
-  ],
+  ], 
   [
 	[-1, -1, -1, -1, -1],
     [-1, -1,  8, -1, -1],

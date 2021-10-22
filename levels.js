@@ -87,8 +87,8 @@ let level_goals = [
     [-1, -1, -1, -1, -1],
   ],  
   [
-	[-1, -1, -1, -1, -1], //tt 13 - relies on many others, think this ought to be at the end since it's pretty close to being a 'real' puzzle
-	[13, 13, -1, 13, 13],
+	[-1, -1, -1, -1, -1], //tt 12 - relies on many others, think this ought to be at the end since it's pretty close to being a 'real' puzzle
+	[12, 12, -1, 12, 12],
 	[-1, -1, -1, -1, -1],
   ],
   [

@@ -1392,7 +1392,7 @@ async function activate_at(coords) {
   			spr_w, spr_h
   		)
   	})
-    await sleep(50);
+    await sleep(OP_DURATION);
     extra_draw_code.pop()
     return false
   } else {

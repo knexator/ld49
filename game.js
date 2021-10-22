@@ -8,6 +8,8 @@ image0.src = "s0.png";*/
 rotators wont properly tirgger the destruction of border stuff
 */
 
+let OP_DURATION = 150;
+
 
 class Symbol {
   sprite = null // static property, doesn't need to be in constructor
@@ -21,7 +23,7 @@ class Symbol {
   }
 
   async actfunc() {
-    await sleep(100)
+    // await sleep(OP_DURATION)
   }
 
   async delfunc() {
@@ -54,12 +56,20 @@ class Bomb extends Symbol {
 
   async actfunc() {
     let k = 0;
-
     for (const offset of threebythreeoffsets) {
       let offset_coor = this.coords.add(offset)
       await kill_at(offset_coor)
-      await sleep(20)
-      // L.grid[offset_coor.str()]?.getKilled()
+      extra_draw_code.push(() => {
+        if (inBounds(offset_coor)) {
+          drawactedtile(offset_coor);
+          k += 1;
+        }
+      })
+    }
+    await sleep(OP_DURATION) // deleting
+    while (k>0) {
+      extra_draw_code.pop()
+      k-=1;
     }
   }
 }
@@ -76,10 +86,12 @@ class PusherRight extends Symbol {
   async actfunc() {
     // if (checkforblocker(this)) return
     for (let k = N_TILES; k > 0; k--) {
+      let stuff = [];
       for (let d = -1; d < 2; d += 2) { // d = -1, 1
         let target_coor = this.coords.add(new Coords(0, k * d))
         let pushTo_coor = this.coords.add(new Coords(0, (k + 1) * d))
-        await move_to(target_coor, pushTo_coor)
+        stuff.push(move_to(target_coor, pushTo_coor))
+        // await move_to(target_coor, pushTo_coor)
         // await sleep(20)
         /*if (inBounds(target_coor) && occupied(target_coor)) {
           // there is something to be pushed
@@ -98,8 +110,10 @@ class PusherRight extends Symbol {
           }
         }*/
       }
+      await Promise.all(stuff);
     }
-    await sleep(50)
+    await sleep(OP_DURATION)  // gap between deleting & moving
+    // await sleep(50)
     await move_to(this.coords, this.coords.add(new Coords(1, 0)))
   }
 }
@@ -110,28 +124,38 @@ class PullerUp extends Symbol {
   async actfunc() {
     // more special cases, yay
     // if (checkforblocker(this)) return
-    for (let k = 1; k < N_TILES; k++) {
-      for (let d = -1; d < 2; d += 2) { // d = -1, 1
-        if (k == 1) {
-          // special case: adjacent tiles are killed
-          await kill_at(this.coords.add(new Coords(k * d, 0)))
 
-          // Another option:
-          //_quietDelete(L.grid[this.coords.add(new Coords(k * d, 0))?.str()])
-          // destroys the thing without triggering special effect
-        } else {
-          let target_coor = this.coords.add(new Coords(k * d, 0))
-          let pullTo_coor = this.coords.add(new Coords((k - 1) * d, 0))
+    // special case: adjacent tiles are killed
+    let coords_a = this.coords.add(new Coords( 1, 0))
+    let coords_b = this.coords.add(new Coords(-1, 0))
+    await kill_at(coords_a)
+    await kill_at(coords_b)
+    extra_draw_code.push(() => {
+      // ctx.fillStyle = "red"
+      if (inBounds(coords_a)) { drawactedtile(coords_a) }
+      if (inBounds(coords_b)) { drawactedtile(coords_b) }
+    })
+    await sleep(OP_DURATION)
+    extra_draw_code.pop()
+
+    for (let k = 2; k < N_TILES; k++) {
+      let stuff = [];
+      for (let d = -1; d < 2; d += 2) { // d = -1, 1
+        let target_coor = this.coords.add(new Coords(k * d, 0))
+        let pullTo_coor = this.coords.add(new Coords((k - 1) * d, 0))
         // symbol.coords = to_coords
         // L.grid[to_coords.str()] = symbol
         // await move_to(target_coor, pullTo_coor)
-          await move_to(target_coor, pullTo_coor)
-          // await sleep(20)
-        }
+        // await move_to(target_coor, pullTo_coor)
+        stuff.push(move_to(target_coor, pullTo_coor))
+        // await sleep(20)
       }
+      await Promise.all(stuff);
     }
+    await sleep(OP_DURATION)  // gap between deleting & moving
     await move_to(this.coords, this.coords.add(new Coords(0, -1)))
-    await sleep(40)
+    // await sleep(40)
+    // await sleep(OP_DURATION)
   }
 }
 
@@ -149,19 +173,11 @@ class Rotator extends Symbol {
       rotatingPieces.push(L.grid[offset_coor.str()]) // possibly undefined, but no problem
     }
     let pending_kill = null
-    console.log("hoasdf")
+    // console.log("hoasdf")
     extra_draw_code.push(() => {
-      console.log("asdfklñjasdflñ")
-	  /*
-      ctx.fillStyle = "red"
-      ctx.fillRect(
-        X_GRID + TILE * this.coords.x - TILE * 1.1,
-        Y_GRID + TILE * this.coords.y - TILE * 1.1,
-        TILE * 3.2, TILE * 3.2)
-		*/
-		for (const offset of threebythreeoffsets){
-			drawactedtile(this.coords.add(offset));
-		}
+  		for (const offset of threebythreeoffsets){
+  			drawactedtile(this.coords.add(offset));
+  		}
     })
     for (var k = 0; k < 8; k++) {
       let offset_coor = this.coords.add(threebythreeoffsets[k])
@@ -195,7 +211,7 @@ class Rotator extends Symbol {
       console.log("pending_kill: ", pending_kill)
       await kill_at(pending_kill.coords)
     }
-    await sleep(200)
+    await sleep(OP_DURATION)  // rotating
     extra_draw_code.pop()
   }
 }
@@ -243,10 +259,8 @@ class RunAway extends Symbol {
       }*/
       //this.forceMove(moveTo_coor)
       await clone_tile(clonable_coor, old_coor)
-      await sleep(100)
+      // await sleep(100)
       //makesymbolat(old_coor, closePiece.constructor)
-    } else {
-      await sleep(100)
     }
     /*for (var k = 0; k < 8; k++) {
       let offset_coor = this.coords.add(threebythreeoffsets[k])
@@ -296,7 +310,8 @@ class TaxiCab extends Symbol {
         }
       }
       if (drawn === 0) break
-      await sleep(100)
+      await sleep(OP_DURATION)
+      // await sleep(100)
       if (d < min_dist) {
         for (let k=0; k<drawn; k++) {
           extra_draw_code.pop()
@@ -310,9 +325,10 @@ class TaxiCab extends Symbol {
         let [_coor, thingy] = level_objects[k]
         if (taxiCabDist(thingy.coords, this.coords) !== min_dist) continue;
         await kill_at(thingy.coords)
-        await sleep(50)
+        // await sleep(50)
       }
-      await sleep(50)
+      await sleep(OP_DURATION)
+      // await sleep(50)
       for (let k=0; k<drawn; k++) {
         extra_draw_code.pop()
       }
@@ -336,11 +352,12 @@ class Faller extends Symbol {
       await move_to(this.coords, new_coors)
       // await sleep(100)
     } else {
-      extra_draw_code.push(() => {
+      /*extra_draw_code.push(() => {
         if (inBounds(this.coords)) { drawactedtile(this.coords) }
       })
-      await sleep(50)
-      extra_draw_code.pop()
+      await sleep(OP_DURATION)
+      // await sleep(50)
+      extra_draw_code.pop()*/
     }
   }
 }
@@ -351,13 +368,16 @@ class Blocker extends Symbol {
     super(coords, () => { }, () => this.extend(), () => { }, images[8]);
   }*/
   async actfunc() {
+    let stuff = []
     for (var k = 0; k < 4; k++) {
       let offset_coor = this.coords.add(offsets[k])
       if (inBounds(offset_coor) && !occupied(offset_coor)) {
-        await clone_tile(this.coords, offset_coor) //changed this, shouldn't be cloning onto existing stuff
-		await sleep(10)
+        stuff.push(clone_tile(this.coords, offset_coor)) //changed this, shouldn't be cloning onto existing stuff
+        // await clone_tile(this.coords, offset_coor) //changed this, shouldn't be cloning onto existing stuff
+		    // await sleep(10)
       }
     }
+    await Promise.all(stuff)
   }
 
   /*extend() {
@@ -401,13 +421,15 @@ class Preserver extends Symbol {
 class Preserver extends Symbol {
   sprite = images[10]
 	async actfunc() {
+    let stuff = []
 		for (var k = 0; k < 8; k++) {
 			let offset_coor = this.coords.add(threebythreeoffsets[k])
 			if (inBounds(offset_coor)) {
-        await clone_tile_from_type(L.recordedSymbols[k], offset_coor)
-				await sleep(50)
+        stuff.push(clone_tile_from_type(L.recordedSymbols[k], offset_coor))
+				// await sleep(50)
 			}
 		}
+    await Promise.all(stuff)
 	}
 
 	async placefunc() {
@@ -451,37 +473,24 @@ class OrthoCopier extends Symbol {
     super(coords, () => { }, () => this.extend(), () => { }, );
   }*/
   async actfunc() {
+    let stuff = []
     for (var k = 0; k < 4; k++) {
       let offset_coor = this.coords.add(offsets[k])
       if (inBounds(offset_coor) && occupied(offset_coor)) {
-		  if (L.grid[offset_coor.str()].constructor.name !== "OrthoCopier"){
-			// makesymbolat(offset_coor, OrthoCopier)
-			await clone_tile(this.coords, offset_coor)
-			await sleep(100)
-		  }
+  		  if (L.grid[offset_coor.str()].constructor.name !== "OrthoCopier") {
+    			// makesymbolat(offset_coor, OrthoCopier)
+    			stuff.push(clone_tile(this.coords, offset_coor))
+    			//await sleep(100)
+  		  }
       }
     }
+    await Promise.all(stuff)
   }
 }
 
 class Kamikaze extends Symbol {
   sprite = images[12]
-  /*constructor(coords) {
-    super(coords, () => { }, () => { }, () => this.kamikaze(), images[11]);
-  }*/
-  async delfunc() {
-	super.delfunc();
-    for (var k = 0; k < 4; k++) {
-      let offset_coor = this.coords.add(offsets[k])
-      let thingy = L.grid[offset_coor.str()]
-      if (!thingy) continue
-      if (thingy.constructor.name == "Kamikaze") {
-        await kill_at(offset_coor)
-        await sleep(50)
-        // thingy.delfunc() // somehow it doesn't enter in an endless loop, lol
-      }
-    }
-  }
+  // TODO: this symbol does nothing
 }
 
 class LeftSpreader extends Symbol {
@@ -491,9 +500,12 @@ class LeftSpreader extends Symbol {
 		let offset_coor = this.coords.add(new Coords(-1,0));
 		if (inBounds(offset_coor) && !occupied(offset_coor)) {
 			await clone_tile(this.coords, offset_coor)
-			await sleep(20)
-			await kill_at(this.coords.add(new Coords(-1,-1)))
-			await kill_at(this.coords.add(new Coords(-1,1)))
+			// await sleep(20)
+      // await sleep(OP_DURATION)
+      await Promise.all([
+        kill_at(this.coords.add(new Coords(-1,-1)), true),
+  			kill_at(this.coords.add(new Coords(-1,1)), true)
+      ])
 		}
 	}
 
@@ -509,10 +521,11 @@ class AboveBelow extends Symbol {
     let obj_below_type = L.grid[this.coords.add(new Coords(0, 1)).str()]?.constructor // possibly undefined
 
     if (obj_above_type === undefined || obj_below_type === undefined) {
-      await sleep(100)
+      // await sleep(100)
       return
     }
 
+    // TODO: add extra drawing?
     Object.entries(L.grid).forEach(([coor, thingy]) => {
       if (thingy.constructor.name == obj_above_type.name) {
         L.grid[coor] = new obj_below_type(thingy.coords);
@@ -542,22 +555,8 @@ class AboveBelow extends Symbol {
 		*/
       }
     })
-    await sleep(100)
-  }
-}
-
-class Survivor extends Symbol {
-  sprite = images[15]
-
-  async delfunc() {
-    // super.delfunc();
-    for (var k = 0; k < 4; k++) {
-      let offset_coor = this.coords.add(offsets[k])
-      if (inBounds(offset_coor) && !occupied(offset_coor)) {
-        await clone_tile(this.coords, offset_coor)
-      }
-    }
-    _quietDelete(this)
+    await sleep(OP_DURATION)
+    // await sleep(100)
   }
 }
 
@@ -579,9 +578,6 @@ let symbol_types = [
   Kamikaze,
   LeftSpreader,
   AboveBelow,
-  //Survivor, // 15
-  /*Nooper,
-  Nooper,*/
 ]
 
 function preload_level(goal, n) {
@@ -1297,7 +1293,7 @@ function drawactedtile(coords) {
 // (it will also help with graphics)
 // These should be understood as commands; they will return true if the action is succesful
 
-async function kill_at(coords, explicit_kill=true) {
+async function kill_at(coords, explicit_kill=false) {
   if (explicit_kill) {
     extra_draw_code.push(() => {
       // ctx.fillStyle = "red"
@@ -1307,19 +1303,14 @@ async function kill_at(coords, explicit_kill=true) {
 
 
   let symbol = L.grid[coords.str()]
-  if (symbol === undefined) {
-    // this will be used for graphics
-    await sleep(50)
-    if (explicit_kill) extra_draw_code.pop()
-    return true;
-  } else {
-    // kill triggers the del action
+  if (symbol !== undefined) {
     await symbol.delfunc();
-    await sleep(50)
-    if (explicit_kill) extra_draw_code.pop()
-    //_quietDelete(symbol); //delfuncs must do this themself (but may do it at any point in their execution)
-    return true;
   }
+  if (explicit_kill) {
+    await sleep(OP_DURATION)
+    extra_draw_code.pop()
+  }
+  return true;
 }
 
 async function move_to(from_coords, to_coords) {
@@ -1341,13 +1332,15 @@ async function move_to(from_coords, to_coords) {
   }*/
   if (symbol === undefined) {
     // this will be used for graphics
-    await sleep(50)
+    await sleep(OP_DURATION)
+    // await sleep(50)
     extra_draw_code.pop()
     return true;
   }
   if (!inBounds(to_coords)) {
     // _quietDelete(symbol);
     await kill_at(from_coords)
+    await sleep(OP_DURATION)
     extra_draw_code.pop()
     return true
 
@@ -1371,7 +1364,8 @@ async function move_to(from_coords, to_coords) {
   delete L.grid[from_coords.str()];
   symbol.coords = to_coords
   L.grid[to_coords.str()] = symbol
-  await sleep(100)
+  // await sleep(100)
+  await sleep(OP_DURATION)
   extra_draw_code.pop()
 
   return true
@@ -1404,6 +1398,7 @@ async function activate_at(coords) {
   } else {
     activate_sound.play()
   }
+  await sleep(OP_DURATION)  // initial highlight
   await symbol.actfunc()
   extra_draw_code.pop()
   return true
@@ -1415,14 +1410,23 @@ async function clone_tile(from_coords, to_coords) {
   // Another option:
   //_quietDelete(...) etc
 
+  extra_draw_code.push(() => {
+    // ctx.fillStyle = "red"
+    if (inBounds(to_coords)) { drawactedtile(to_coords) }
+  })
+
   let symbol = L.grid[from_coords.str()]
   if (symbol === undefined) {
+    await sleep(OP_DURATION)
+    extra_draw_code.pop()
     return true
   }
 
   let new_symbol = new symbol.constructor(to_coords)
   L.grid[to_coords.str()] = new_symbol
   insertbeforecurrentaction(new_symbol);
+  await sleep(OP_DURATION)
+  extra_draw_code.pop()
 
   // extremely hacky, oops
   /*if (new_symbol.constructor.name === "Preserver") {
@@ -1442,7 +1446,15 @@ async function clone_tile_from_type(tile_type, to_coords, add_to_end=false, igno
   // Another option:
   //_quietDelete(...) etc
 
+  extra_draw_code.push(() => {
+    // ctx.fillStyle = "red"
+    if (inBounds(to_coords)) { drawactedtile(to_coords) }
+  })
+
+
   if (tile_type === undefined) {
+    await sleep(OP_DURATION)
+    extra_draw_code.pop()
     return true
   }
 
@@ -1453,6 +1465,8 @@ async function clone_tile_from_type(tile_type, to_coords, add_to_end=false, igno
   } else {
     insertbeforecurrentaction(new_symbol);
   }
+  await sleep(OP_DURATION)
+  extra_draw_code.pop()
   // extremely hacky, oops
   /*if (new_symbol.constructor.name === "Preserver") {
     new_symbol.recordedTypes = symbol.recordedTypes

@@ -205,11 +205,11 @@ class Rotator extends Symbol {
     }
     let pending_kill = null
     // console.log("hoasdf")
-    extra_draw_code.push(() => {
+    /*extra_draw_code.push(() => {
   		for (const offset of threebythreeoffsets){
   			drawactedtile(this.coords.add(offset));
   		}
-    })
+    })*/
     let moved = [];
     for (var k = 0; k < 8; k++) {
       let offset_coor = this.coords.add(threebythreeoffsets[k])
@@ -217,14 +217,14 @@ class Rotator extends Symbol {
       if (piece !== undefined) {
         if (inBounds(offset_coor)) {
           piece.start_move_time = global_time
-          piece.action_duration = OP_DURATION
+          piece.action_duration = OP_DURATION * 2
           piece.prev_coords = piece.coords.clone();
           moved.push(piece)
           piece.coords = offset_coor;
           L.grid[offset_coor.str()] = piece;
         } else {
           piece.start_move_time = global_time
-          piece.action_duration = OP_DURATION
+          piece.action_duration = OP_DURATION * 2
           piece.prev_coords = piece.coords.clone();
           piece.coords = offset_coor;
           L.grid[offset_coor.str()] = piece;
@@ -246,7 +246,7 @@ class Rotator extends Symbol {
       }*/
       // rotatingPieces.push(L.grid[offset_coor.str()]) // possibly undefined, but no problem
     }
-    await sleep(OP_DURATION)  // rotating
+    await sleep(OP_DURATION * 2)  // rotating
     if (pending_kill) {
       console.log("pending_kill: ", pending_kill)
       await kill_at(pending_kill.coords)
@@ -254,7 +254,7 @@ class Rotator extends Symbol {
     for (var i = 0; i < moved.length; i++) {
       moved[i].prev_coords = null
     }
-    extra_draw_code.pop()
+    //extra_draw_code.pop()
   }
 }
 

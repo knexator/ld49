@@ -15,7 +15,38 @@ class Symbol {
   sprite = null // static property, doesn't need to be in constructor
   constructor(coords) {
     this.coords = coords;
+    this.prev_coords = null
+    this.start_move_time = 0
+    this.action_duration = 0
     this.deleted = false
+    this.active = false
+  }
+
+  draw() {
+    let x = this.coords.x
+    let y = this.coords.y
+    if (this.prev_coords === null) {
+      ctx.drawImage(this.sprite, X_GRID + TILE * this.coords.x, Y_GRID + TILE * this.coords.y, TILE, TILE);
+    } else {
+      let t = (global_time - this.start_move_time) / this.action_duration
+      x = lerp(this.prev_coords.x, this.coords.x, t)
+      y = lerp(this.prev_coords.y, this.coords.y, t)
+      console.log(t)
+      ctx.drawImage(this.sprite, X_GRID + TILE * x, Y_GRID + TILE * y, TILE, TILE);
+    }
+
+    if (this.active) {
+      let spr_w = activatingtile_image.width * TILE / 75
+  		let spr_h = activatingtile_image.height * TILE / 75
+  		ctx.drawImage(
+  			activatingtile_image,
+  			Math.floor(X_GRID + x * TILE + (TILE - spr_w)/2),
+  			Math.floor(Y_GRID + y * TILE + (TILE - spr_h)/2),
+  			spr_w, spr_h
+  		)
+    }
+
+    this.visual_coords = new Coords(x, y)
   }
 
   async placefunc() {
@@ -85,8 +116,8 @@ class PusherRight extends Symbol {
 
   async actfunc() {
     // if (checkforblocker(this)) return
+    let stuff = [];
     for (let k = N_TILES; k > 0; k--) {
-      let stuff = [];
       for (let d = -1; d < 2; d += 2) { // d = -1, 1
         let target_coor = this.coords.add(new Coords(0, k * d))
         let pushTo_coor = this.coords.add(new Coords(0, (k + 1) * d))
@@ -110,8 +141,8 @@ class PusherRight extends Symbol {
           }
         }*/
       }
-      await Promise.all(stuff);
     }
+    await Promise.all(stuff);
     await sleep(OP_DURATION)  // gap between deleting & moving
     // await sleep(50)
     await move_to(this.coords, this.coords.add(new Coords(1, 0)))
@@ -138,8 +169,8 @@ class PullerUp extends Symbol {
     await sleep(OP_DURATION)
     extra_draw_code.pop()
 
+    let stuff = [];
     for (let k = 2; k < N_TILES; k++) {
-      let stuff = [];
       for (let d = -1; d < 2; d += 2) { // d = -1, 1
         let target_coor = this.coords.add(new Coords(k * d, 0))
         let pullTo_coor = this.coords.add(new Coords((k - 1) * d, 0))
@@ -150,8 +181,8 @@ class PullerUp extends Symbol {
         stuff.push(move_to(target_coor, pullTo_coor))
         // await sleep(20)
       }
-      await Promise.all(stuff);
     }
+    await Promise.all(stuff);
     await sleep(OP_DURATION)  // gap between deleting & moving
     await move_to(this.coords, this.coords.add(new Coords(0, -1)))
     // await sleep(40)
@@ -179,20 +210,28 @@ class Rotator extends Symbol {
   			drawactedtile(this.coords.add(offset));
   		}
     })
+    let moved = [];
     for (var k = 0; k < 8; k++) {
       let offset_coor = this.coords.add(threebythreeoffsets[k])
       let piece = rotatingPieces[(k + 1) % 8]
       if (piece !== undefined) {
         if (inBounds(offset_coor)) {
+          piece.start_move_time = global_time
+          piece.action_duration = OP_DURATION
+          piece.prev_coords = piece.coords.clone();
+          moved.push(piece)
           piece.coords = offset_coor;
           L.grid[offset_coor.str()] = piece;
         } else {
-          pending_kill = piece
+          piece.start_move_time = global_time
+          piece.action_duration = OP_DURATION
+          piece.prev_coords = piece.coords.clone();
           piece.coords = offset_coor;
           L.grid[offset_coor.str()] = piece;
-          //piece.delfunc() // TODO: THIS DOESN'T AWAIT
-          // _quietDelete(piece)
-          // await
+          pending_kill = piece
+          /*pending_kill = piece
+          piece.coords = offset_coor;
+          L.grid[offset_coor.str()] = piece;*/
         }
       } else {
         if (inBounds(offset_coor)) {
@@ -207,11 +246,14 @@ class Rotator extends Symbol {
       }*/
       // rotatingPieces.push(L.grid[offset_coor.str()]) // possibly undefined, but no problem
     }
+    await sleep(OP_DURATION)  // rotating
     if (pending_kill) {
       console.log("pending_kill: ", pending_kill)
       await kill_at(pending_kill.coords)
     }
-    await sleep(OP_DURATION)  // rotating
+    for (var i = 0; i < moved.length; i++) {
+      moved[i].prev_coords = null
+    }
     extra_draw_code.pop()
   }
 }
@@ -828,7 +870,8 @@ function drawgrid() {
 
 function drawgridelements() {
   for (const [_key, value] of Object.entries(L.grid)) {
-    ctx.drawImage(value.sprite, X_GRID + TILE * value.coords.x, Y_GRID + TILE * value.coords.y, TILE, TILE);
+    value.draw()
+    // ctx.drawImage(value.sprite, X_GRID + TILE * value.coords.x, Y_GRID + TILE * value.coords.y, TILE, TILE);
   }
 }
 
@@ -861,8 +904,8 @@ function drawactionnumbers() {
     ctx.globalAlpha = 0.8;
     ctx.fillStyle = "#D3B983"
     ctx.fillRect(
-      X_GRID + TILE * L.actions[i].coords.x + TEXT_X * TILE / 75,
-      Y_GRID + TILE * L.actions[i].coords.y + TEXT_Y * TILE / 75,
+      X_GRID + TILE * L.actions[i].visual_coords.x + TEXT_X * TILE / 75,
+      Y_GRID + TILE * L.actions[i].visual_coords.y + TEXT_Y * TILE / 75,
       TEXT_SX * TILE / 75, TEXT_SY * TILE / 75
     )
     ctx.globalAlpha = 1;
@@ -870,8 +913,8 @@ function drawactionnumbers() {
     ctx.fillStyle = "#b52012" // c22b71 973B34 9D5637 CB6A36 7A622F 983C35 d12a1d b52012
 		ctx.fillText(
       i.toString().padStart(2,'0'),
-      X_GRID + TILE * L.actions[i].coords.x + TEXT_X * TILE / 75,
-      Y_GRID + TILE * L.actions[i].coords.y + TEXT_Y * TILE / 75
+      X_GRID + TILE * L.actions[i].visual_coords.x + TEXT_X * TILE / 75,
+      Y_GRID + TILE * L.actions[i].visual_coords.y + TEXT_Y * TILE / 75
     )
 	}
 }
@@ -1082,10 +1125,17 @@ window.addEventListener("load", _e => {
   window.requestAnimationFrame(draw);
 });
 
-function draw() {
+let global_time = 0;
+let last_time = 0;
+function draw(cur_time) {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  let deltaTime = Math.min(cur_time - last_time, 30)
+  last_time = cur_time
 
   SKIP_ANIMS = isButtonDown("left") // so hacky it hurts
+  if (SKIP_ANIMS) deltaTime *= 10
+
+  global_time += deltaTime
 
   if(DEBUG_ALLOW_KEYPLACEMENT) {
     for (let k = 0; k < 14; k++) {
@@ -1314,74 +1364,94 @@ async function kill_at(coords, explicit_kill=false) {
 }
 
 async function move_to(from_coords, to_coords) {
-  // console.log("called move_to")
-  extra_draw_code.push(() => {
-    // ctx.fillStyle = "red"
-    if (inBounds(from_coords)) { drawactedtile(from_coords) }
-    if (inBounds(to_coords)) { drawactedtile(to_coords) }
-  })
   if (!inBounds(from_coords)) {
-    extra_draw_code.pop()
     return true
   }
   let symbol = L.grid[from_coords.str()]
   let occupying_symbol = L.grid[to_coords.str()]
-  /*if (symbol === undefined && occupying_symbol === undefined) {
-    extra_draw_code.pop() // don't wait
-    return true;
-  }*/
   if (symbol === undefined) {
     // this will be used for graphics
     await sleep(OP_DURATION)
     // await sleep(50)
-    extra_draw_code.pop()
+    // extra_draw_code.pop()
     return true;
+  }
+
+  if (symbol === undefined) {
+    // console.log("MOVING AN UNDEFINED SYMBOL")
+    // this will be used for graphics
+    await sleep(OP_DURATION)
+    // await sleep(50)
+    // extra_draw_code.pop()
+    return true;
+  }
+  if (occupying_symbol) {
+    console.log('before kill_at: ', global_time)
+    await kill_at(to_coords)  // should always be done instantly
+    console.log('after kill_at: ', global_time)
   }
   if (!inBounds(to_coords)) {
     // _quietDelete(symbol);
-    await kill_at(from_coords)
+    let initial_time = global_time
+    symbol.prev_coords = symbol.coords.clone()
+    symbol.start_move_time = initial_time
+    symbol.action_duration = OP_DURATION
+    delete L.grid[from_coords.str()];
+    symbol.coords = to_coords
+    L.grid[to_coords.str()] = symbol
+    // await sleep(100)
+    console.log("gonna sleep now")
     await sleep(OP_DURATION)
-    extra_draw_code.pop()
-    return true
-
-    // Another option:
-    //return false
-
-    // Another option:
-    //symbol.delfunc() // tigger special effects when falling out of the border
-    //return true
-  }
-  if (occupying_symbol) {
+    console.log("finished sleeping now")
+    symbol.prev_coords = null
     await kill_at(to_coords)
-
-    // Another option:
-    //return false // don't step on other symbols
-
-    // Another option:
-    //_quietDelete(occupying_symbol) // delete without triggering special effects
+    console.log("killed a thing")
+    return true
   }
 
+  let initial_time = global_time
+  symbol.prev_coords = symbol.coords.clone()
+  symbol.start_move_time = initial_time
+  symbol.action_duration = OP_DURATION
   delete L.grid[from_coords.str()];
   symbol.coords = to_coords
   L.grid[to_coords.str()] = symbol
   // await sleep(100)
+  console.log("global_time", global_time)
   await sleep(OP_DURATION)
-  extra_draw_code.pop()
+  console.log("global_time", global_time)
+  symbol.prev_coords = null
+  // extra_draw_code.pop()
 
   return true
 }
 
+function drawSymbolAt(coords, sprite) {
+  ctx.drawImage(sprite, X_GRID + TILE * coords.x, Y_GRID + TILE * coords.y, TILE, TILE);
+}
+
+function lerpCoords(coor1, coor2, t) {
+  return new Coords(
+    lerp(coor1.x, coor2.x, t),
+    lerp(coor1.y, coor2.y, t)
+  )
+}
+
+function lerp(a, b, t) {
+  return a * (1 - t) + b * t
+}
+
 // activate the stuff
 async function activate_at(coords) {
-  pushactivatingtile(coords)
+  // pushactivatingtile(coords)
   let symbol = L.grid[coords.str()]
   if (symbol === undefined) {
     // this will be used for graphics
-    extra_draw_code.pop()
+    // extra_draw_code.pop()
     return true;
   }
   if (checkforblocker(symbol)) {
-    extra_draw_code.pop()
+    // extra_draw_code.pop()
     extra_draw_code.push(() => {
   		spr_w = activation_blocked_image.width * TILE / 75
   		spr_h = activation_blocked_image.height * TILE / 75
@@ -1398,9 +1468,12 @@ async function activate_at(coords) {
   } else {
     activate_sound.play()
   }
-  await sleep(OP_DURATION)  // initial highlight
+  symbol.active = true
+  await sleep(OP_DURATION / 2)  // initial highlight
   await symbol.actfunc()
-  extra_draw_code.pop()
+  await sleep(OP_DURATION / 2)  // final highlight
+  symbol.active = false
+  // extra_draw_code.pop()
   return true
 }
 

@@ -10,7 +10,6 @@ rotators wont properly tirgger the destruction of border stuff
 
 let OP_DURATION = 150;
 
-
 class Symbol {
   sprite = null // static property, doesn't need to be in constructor
   constructor(coords) {
@@ -1667,6 +1666,25 @@ async function doturn() {
   while (i < L.actions.length) {
     // await L.actions[i].actfunc()
     await activate_at(L.actions[i].coords)
+    if (i + 1 < L.actions.length) {
+      let cur_time = global_time
+      extra_draw_code.push(() => {
+        let t = (global_time - cur_time) / OP_DURATION
+        t = t * t
+        let coors = lerpCoords(L.actions[i].coords, L.actions[i+1].coords, t)
+        console.log(coors)
+        let spr_w = activatingtile_image.width * TILE / 75
+    		let spr_h = activatingtile_image.height * TILE / 75
+    		ctx.drawImage(
+    			activatingtile_image,
+    			Math.floor(X_GRID + coors.x * TILE + (TILE - spr_w)/2),
+    			Math.floor(Y_GRID + coors.y * TILE + (TILE - spr_h)/2),
+    			spr_w, spr_h
+    		)
+      })
+      await sleep(OP_DURATION)
+      extra_draw_code.pop()
+    }
     // L.victory_rectangle = check_won()
     // await sleep(100) // TODO: this should be in the things actfuncs, not here
     i += 1

@@ -9,6 +9,7 @@ rotators wont properly tirgger the destruction of border stuff
 */
 
 let OP_DURATION = 150;
+let SMOOTH_CIRCLE_MOVEMENT = false;
 
 class Symbol {
   sprite = null // static property, doesn't need to be in constructor
@@ -28,6 +29,7 @@ class Symbol {
       ctx.drawImage(this.sprite, X_GRID + TILE * this.coords.x, Y_GRID + TILE * this.coords.y, TILE, TILE);
     } else {
       let t = (global_time - this.start_move_time) / this.action_duration
+      t = Math.max(0, Math.min(1, t));
       x = lerp(this.prev_coords.x, this.coords.x, t)
       y = lerp(this.prev_coords.y, this.coords.y, t)
       console.log(t)
@@ -1313,6 +1315,7 @@ function pushactivatingtile(coords) {
 		ctx.fillRect(coords.x * TILE - TILE*.1 + X_GRID, coords.y * TILE - TILE*.1 + Y_GRID, TILE * 1.2, TILE  * 1.2)
 	})
 	*/
+  /* already being done elsewhere
 	extra_draw_code.push(() => {
 		spr_w = activatingtile_image.width * TILE / 75
 		spr_h = activatingtile_image.height * TILE / 75
@@ -1323,6 +1326,7 @@ function pushactivatingtile(coords) {
 			spr_w, spr_h
 		)
 	})
+  */
 }
 
 
@@ -1666,24 +1670,26 @@ async function doturn() {
   while (i < L.actions.length) {
     // await L.actions[i].actfunc()
     await activate_at(L.actions[i].coords)
-    if (i + 1 < L.actions.length) {
-      let cur_time = global_time
-      extra_draw_code.push(() => {
-        let t = (global_time - cur_time) / OP_DURATION
-        t = t * t
-        let coors = lerpCoords(L.actions[i].coords, L.actions[i+1].coords, t)
-        console.log(coors)
-        let spr_w = activatingtile_image.width * TILE / 75
-    		let spr_h = activatingtile_image.height * TILE / 75
-    		ctx.drawImage(
-    			activatingtile_image,
-    			Math.floor(X_GRID + coors.x * TILE + (TILE - spr_w)/2),
-    			Math.floor(Y_GRID + coors.y * TILE + (TILE - spr_h)/2),
-    			spr_w, spr_h
-    		)
-      })
-      await sleep(OP_DURATION)
-      extra_draw_code.pop()
+    if (SMOOTH_CIRCLE_MOVEMENT) {
+      if (i + 1 < L.actions.length) {
+        let cur_time = global_time
+        extra_draw_code.push(() => {
+          let t = (global_time - cur_time) / OP_DURATION
+          t = t * t
+          let coors = lerpCoords(L.actions[i].coords, L.actions[i+1].coords, t)
+          console.log(coors)
+          let spr_w = activatingtile_image.width * TILE / 75
+          let spr_h = activatingtile_image.height * TILE / 75
+          ctx.drawImage(
+            activatingtile_image,
+            Math.floor(X_GRID + coors.x * TILE + (TILE - spr_w)/2),
+            Math.floor(Y_GRID + coors.y * TILE + (TILE - spr_h)/2),
+            spr_w, spr_h
+          )
+        })
+        await sleep(OP_DURATION)
+        extra_draw_code.pop()
+      }
     }
     // L.victory_rectangle = check_won()
     // await sleep(100) // TODO: this should be in the things actfuncs, not here

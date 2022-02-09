@@ -90,7 +90,6 @@ class Bomb extends Symbol {
     let k = 0;
     for (const offset of threebythreeoffsets) {
       let offset_coor = this.coords.add(offset)
-      await kill_at(offset_coor)
       extra_draw_code.push(() => {
         if (inBounds(offset_coor)) {
           drawactedtile(offset_coor);
@@ -98,6 +97,11 @@ class Bomb extends Symbol {
         }
       })
     }
+	for (const offset of threebythreeoffsets) {
+      let offset_coor = this.coords.add(offset)
+	  await kill_at(offset_coor)
+	}
+	
     await sleep(OP_DURATION) // deleting
     while (k>0) {
       extra_draw_code.pop()
@@ -160,13 +164,13 @@ class PullerUp extends Symbol {
     // special case: adjacent tiles are killed
     let coords_a = this.coords.add(new Coords( 1, 0))
     let coords_b = this.coords.add(new Coords(-1, 0))
-    await kill_at(coords_a)
-    await kill_at(coords_b)
     extra_draw_code.push(() => {
       // ctx.fillStyle = "red"
       if (inBounds(coords_a)) { drawactedtile(coords_a) }
       if (inBounds(coords_b)) { drawactedtile(coords_b) }
     })
+	await kill_at(coords_a)
+    await kill_at(coords_b)
     await sleep(OP_DURATION)
     extra_draw_code.pop()
 
@@ -464,22 +468,28 @@ class Preserver extends Symbol {
 class Preserver extends Symbol {
   sprite = images[10]
 	async actfunc() {
-    let stuff = []
+		let N = 0;
+		let stuff = []
 		for (var k = 0; k < 8; k++) {
 			let offset_coor = this.coords.add(threebythreeoffsets[k])
 			if (inBounds(offset_coor)) {
-        stuff.push(clone_tile_from_type(L.recordedSymbols[k], offset_coor))
-				// await sleep(50)
+				stuff.push(clone_tile_from_type(L.recordedSymbols[k], offset_coor))
+				drawactedtile(offset_coor);
+				N += 1;
 			}
 		}
-    await Promise.all(stuff)
+		await Promise.all(stuff)
+		while (N>0) {
+		  extra_draw_code.pop()
+		  N-=1;
+		}
 	}
 
 	async placefunc() {
 		L.recordedSymbols = [];
 		for (var k = 0; k < 8; k++) {
-      let offset_coor = this.coords.add(threebythreeoffsets[k])
-      let asymbol = L.grid[offset_coor.str()]
+	  let offset_coor = this.coords.add(threebythreeoffsets[k])
+	  let asymbol = L.grid[offset_coor.str()]
 			L.recordedSymbols.push(asymbol?.constructor); // possibly undefined
 		}
 	}
@@ -533,7 +543,26 @@ class OrthoCopier extends Symbol {
 
 class Kamikaze extends Symbol {
   sprite = images[12]
-  // TODO: this symbol does nothing
+  
+  async delfunc() {	
+	extra_draw_code.push(() => {
+      if (inBounds(this.coords)) { drawactedtile(this.coords) }
+    });
+	super.delfunc();
+    for (var k = 0; k < 4; k++) {
+      let offset_coor = this.coords.add(offsets[k])
+      let thingy = L.grid[offset_coor.str()]
+      if (!thingy) continue
+      if (thingy.constructor.name == "Kamikaze") {
+        // await kill_at(offset_coor)
+		kill_at(offset_coor)
+        // await sleep(50)
+        // thingy.delfunc() // somehow it doesn't enter in an endless loop, lol
+      }
+    }
+	await sleep(OP_DURATION)
+    extra_draw_code.pop()
+  }
 }
 
 class LeftSpreader extends Symbol {
@@ -1522,10 +1551,10 @@ async function clone_tile_from_type(tile_type, to_coords, add_to_end=false, igno
   // Another option:
   //_quietDelete(...) etc
 
-  extra_draw_code.push(() => {
+  /*extra_draw_code.push(() => {
     // ctx.fillStyle = "red"
     if (inBounds(to_coords)) { drawactedtile(to_coords) }
-  })
+  })*/
 
 
   if (tile_type === undefined) {
@@ -1542,7 +1571,7 @@ async function clone_tile_from_type(tile_type, to_coords, add_to_end=false, igno
     insertbeforecurrentaction(new_symbol);
   }
   await sleep(OP_DURATION)
-  extra_draw_code.pop()
+  //extra_draw_code.pop()
   // extremely hacky, oops
   /*if (new_symbol.constructor.name === "Preserver") {
     new_symbol.recordedTypes = symbol.recordedTypes
